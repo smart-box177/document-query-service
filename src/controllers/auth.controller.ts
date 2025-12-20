@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { oauth2Client } from "../services/google.service";
 import { createResponse } from "../helpers/response";
-import { AuthProvider, IUser } from "../interfaces/user";
+import { AuthProvider } from "../interfaces/user";
 import { User } from "../models/user.model";
 import { google } from "googleapis";
 import jwt from "jsonwebtoken";
