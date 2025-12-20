@@ -1,10 +1,15 @@
-import { model } from "mongoose";
+import { model, Model } from "mongoose";
 import { Schema } from "mongoose";
 import { compare, hash } from "bcrypt";
 import { SALT_ROUNDS } from "../constant";
-import { AuthProvider, UserRole } from "../interfaces/user";
+import {
+  AuthProvider,
+  IUser,
+  IUserDocument,
+  UserRole,
+} from "../interfaces/user";
 
-const userSchema = new Schema(
+const userSchema = new Schema<IUserDocument, Model<IUserDocument>, IUser>(
   {
     username: {
       type: String,
@@ -50,7 +55,7 @@ const userSchema = new Schema(
   { timestamps: true }
 );
 
-userSchema.pre("save", async function () {
+userSchema.pre<IUserDocument>("save", async function () {
   if (!this.isModified("password") || !this.password) return;
   this.password = await hash(this.password, SALT_ROUNDS);
 });
@@ -58,7 +63,8 @@ userSchema.pre("save", async function () {
 userSchema.methods.comparePassword = async function (
   candidatePassword: string
 ) {
+  if (!this.password) return false;
   return compare(candidatePassword, this.password);
 };
 
-export const User = model("user", userSchema);
+export const User = model<IUserDocument>("user", userSchema);

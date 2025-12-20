@@ -1,18 +1,11 @@
 import { NextFunction, Request, Response } from "express";
 import { oauth2Client } from "../services/google.service";
 import { createResponse } from "../helpers/response";
-import { AuthProvider } from "../interfaces/user";
+import { AuthProvider, IUser } from "../interfaces/user";
 import { User } from "../models/user.model";
 import { google } from "googleapis";
 import jwt from "jsonwebtoken";
-import {
-  JWT_ACCESS_SECRET,
-  JWT_ACCESS_EXPIRY,
-  JWT_REFRESH_SECRET,
-  JWT_REFRESH_EXPIRY,
-  JWT_SECRET,
-  JWT_EXPIRY,
-} from "../constant";
+import { JWT_SECRET, JWT_EXPIRY } from "../constant";
 
 const SCOPES = [
   "https://www.googleapis.com/auth/userinfo.email",
@@ -82,15 +75,16 @@ export class AuthController {
           if (googleUser.picture) user.avatar = googleUser.picture;
           await user.save();
         } else {
-          user = await User.create({
-            username: googleUser.email.split("@")[0],
+          user = new User({
             email: googleUser.email,
+            username: googleUser.email.split("@")[0],
             googleId: googleUser.id,
             avatar: googleUser.picture,
             firstname: googleUser.given_name,
             lastname: googleUser.family_name,
             authProvider: AuthProvider.GOOGLE,
           });
+          await user.save();
         }
       }
 
@@ -116,8 +110,74 @@ export class AuthController {
             },
             accessToken,
             refreshToken,
-            googleUser
+            googleUser,
           },
+        })
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public static async signup(req: Request, res: Response, next: NextFunction) {
+    try {
+      const user = await User.create(req.body);
+      res.status(201).json(
+        createResponse({
+          status: 201,
+          success: true,
+          message: "User registered successfully",
+          data: user,
+        })
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public static async signin(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email, password } = req.body;
+      const user = await User.findOne({ email }).orFail(() => {
+        throw new Error("User not found");
+      });
+
+      const isValidPassword = user.comparePassword(password);
+      if (!isValidPassword) {
+        throw new Error("Invalid password");
+      }
+
+      res.status(200).json(
+        createResponse({
+          status: 200,
+          success: true,
+          message: "User logged in successfully",
+          data: user,
+        })
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public static async verifyAccount(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const { userId } = req.body;
+      const user = await User.findOne({ userId }).orFail(() => {
+        throw new Error("User not found");
+      });
+      user.isEmailVerified = true;
+      await user.save();
+      res.status(200).json(
+        createResponse({
+          status: 200,
+          success: true,
+          message: "User verified successfully",
+          data: user,
         })
       );
     } catch (error) {
