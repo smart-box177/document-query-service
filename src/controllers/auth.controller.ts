@@ -160,7 +160,7 @@ export class AuthController {
           status: 200,
           success: true,
           message: "User logged in successfully",
-          data: { ...user, token },
+          data: { user, token },
         })
       );
     } catch (error) {
