@@ -87,6 +87,8 @@ export class AuthController {
             email: googleUser.email,
             googleId: googleUser.id,
             avatar: googleUser.picture,
+            firstname: googleUser.given_name,
+            lastname: googleUser.family_name,
             authProvider: AuthProvider.GOOGLE,
           });
         }

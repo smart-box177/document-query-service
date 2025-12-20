@@ -12,6 +12,12 @@ const userSchema = new Schema(
       unique: true,
       trim: true,
     },
+    firstname: {
+      type: String,
+    },
+    lastname: {
+      type: String,
+    },
     email: {
       type: String,
       unique: true,
