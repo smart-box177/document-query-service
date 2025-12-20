@@ -9,7 +9,7 @@ router.get("/health-check", (_req: Request, res: Response) => {
     createResponse({
       status: 200,
       success: true,
-      message: "Chapta Service is up and running...",
+      message: "contract doc query service is up and running...",
     })
   );
 });

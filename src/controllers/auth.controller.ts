@@ -1,10 +1,10 @@
 import { NextFunction, Request, Response } from "express";
 import { oauth2Client } from "../services/google.service";
 import { createResponse } from "../helpers/response";
-import { User } from "../models/user.model";
 import { AuthProvider } from "../interfaces/user";
-import jwt from "jsonwebtoken";
+import { User } from "../models/user.model";
 import { google } from "googleapis";
+import jwt from "jsonwebtoken";
 import {
   JWT_ACCESS_SECRET,
   JWT_ACCESS_EXPIRY,

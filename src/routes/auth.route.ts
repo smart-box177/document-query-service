@@ -5,6 +5,6 @@ const router = Router();
 
 router.route("/google-signin").get(AuthController.initOAuth);
 
-router.route("/google/callback").get(AuthController.callback);
+router.route("/google-signin/callback").get(AuthController.callback);
 
 export { router as AuthRouter };

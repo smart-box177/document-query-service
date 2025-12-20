@@ -10,7 +10,7 @@ import { IResponse } from "../interfaces/params";
  */
 
 
-export function createResponse({ status, success, message, data = null }: IResponse) {
+export function createResponse({ status, success, message, data = null }: IResponse): object {
     return {
         status,
         success,
