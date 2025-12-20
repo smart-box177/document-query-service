@@ -6,6 +6,7 @@ import { User } from "../models/user.model";
 import { google } from "googleapis";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET, JWT_EXPIRY } from "../constant";
+import { signToken } from "../services/jwt.service";
 
 const SCOPES = [
   "https://www.googleapis.com/auth/userinfo.email",
@@ -147,12 +148,19 @@ export class AuthController {
         throw new Error("Invalid password");
       }
 
+      const payload = {
+        user_id: user._id.toString(),
+        email: user.email,
+      };
+
+      const token = await signToken(payload);
+
       res.status(200).json(
         createResponse({
           status: 200,
           success: true,
           message: "User logged in successfully",
-          data: user,
+          data: { ...user, token },
         })
       );
     } catch (error) {
