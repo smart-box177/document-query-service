@@ -7,6 +7,7 @@ import { google } from "googleapis";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET, JWT_EXPIRY } from "../constant";
 import { signToken } from "../services/jwt.service";
+import APIError from "../helpers/api.error";
 
 const SCOPES = [
   "https://www.googleapis.com/auth/userinfo.email",
@@ -39,13 +40,10 @@ export class AuthController {
       const { code } = req.query;
 
       if (!code || typeof code !== "string") {
-        return res.status(400).json(
-          createResponse({
-            status: 400,
-            success: false,
-            message: "Authorization code is required",
-          })
-        );
+        throw new APIError({
+          message: "Authorization code is required",
+          status: 400,
+        });
       }
 
       const { tokens } = await oauth2Client.getToken(code);
@@ -56,13 +54,10 @@ export class AuthController {
       const { data: googleUser } = await oauth2.userinfo.get();
 
       if (!googleUser.email || !googleUser.id) {
-        return res.status(400).json(
-          createResponse({
-            status: 400,
-            success: false,
-            message: "Failed to get user info from Google",
-          })
-        );
+        throw new APIError({
+          message: "Failed to get user info from Google",
+          status: 400,
+        });
       }
 
       let user = await User.findOne({ googleId: googleUser.id });
@@ -140,12 +135,12 @@ export class AuthController {
     try {
       const { email, password } = req.body;
       const user = await User.findOne({ email }).orFail(() => {
-        throw new Error("User not found");
+        throw new APIError({ message: "User not found", status: 404 });
       });
 
       const isValidPassword = user.comparePassword(password);
       if (!isValidPassword) {
-        throw new Error("Invalid password");
+        throw new APIError({ message: "Invalid password", status: 401 });
       }
 
       const payload = {
@@ -176,7 +171,7 @@ export class AuthController {
     try {
       const { userId } = req.body;
       const user = await User.findOne({ userId }).orFail(() => {
-        throw new Error("User not found");
+        throw new APIError({ message: "User not found", status: 404 });
       });
       user.isEmailVerified = true;
       await user.save();
