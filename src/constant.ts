@@ -22,4 +22,8 @@ export const JWT_REFRESH_EXPIRY = process.env.JWT_REFRESH_EXPIRY || "7d";
 export const JWT_RESET_EXPIRY = process.env.JWT_RESET_EXPIRY || "1h";
 export const JWT_VERIFICATION_EXPIRY = process.env.JWT_VERIFICATION_EXPIRY || "24h";
 
+export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
+export const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
+export const REDIRECT_URI = process.env.REDIRECT_URI || "";
+
 export const BROWSERLESS_TOKEN = process.env.BROWSERLESS_TOKEN;
