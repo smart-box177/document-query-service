@@ -1,7 +1,7 @@
-import { NextFunction, Request, Response } from "express";
-import { createResponse } from "../helpers/response";
-import { Contract } from "../models/contract.model";
 import APIError from "../helpers/api.error";
+import { Contract } from "../models/contract.model";
+import { createResponse } from "../helpers/response";
+import { NextFunction, Request, Response } from "express";
 
 export class ContractController {
   public static async create(req: Request, res: Response, next: NextFunction) {
