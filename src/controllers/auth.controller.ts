@@ -10,6 +10,8 @@ import {
   JWT_ACCESS_EXPIRY,
   JWT_REFRESH_SECRET,
   JWT_REFRESH_EXPIRY,
+  JWT_SECRET,
+  JWT_EXPIRY,
 } from "../constant";
 
 const SCOPES = [
@@ -90,11 +92,11 @@ export class AuthController {
         }
       }
 
-      const accessToken = jwt.sign({ userId: user._id }, JWT_ACCESS_SECRET, {
-        expiresIn: JWT_ACCESS_EXPIRY as jwt.SignOptions["expiresIn"],
+      const accessToken = jwt.sign({ userId: user._id }, JWT_SECRET, {
+        expiresIn: JWT_EXPIRY as jwt.SignOptions["expiresIn"],
       });
-      const refreshToken = jwt.sign({ userId: user._id }, JWT_REFRESH_SECRET, {
-        expiresIn: JWT_REFRESH_EXPIRY as jwt.SignOptions["expiresIn"],
+      const refreshToken = jwt.sign({ userId: user._id }, JWT_SECRET, {
+        expiresIn: JWT_EXPIRY as jwt.SignOptions["expiresIn"],
       });
 
       res.json(
