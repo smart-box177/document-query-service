@@ -28,6 +28,7 @@ export class ContractController {
         operator,
         year,
         contractorName,
+        hasDocument,
       } = req.query;
       const query: Record<string, unknown> = {};
 
@@ -35,6 +36,7 @@ export class ContractController {
       if (year) query.year = Number(year);
       if (contractorName)
         query.contractorName = { $regex: contractorName, $options: "i" };
+      if (hasDocument !== undefined) query.hasDocument = hasDocument === "true";
 
       const contracts = await Contract.find(query)
         .skip((Number(page) - 1) * Number(limit))
