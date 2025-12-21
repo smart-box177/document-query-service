@@ -46,12 +46,30 @@ export class ContractController {
 
       const total = await Contract.countDocuments(query);
 
+      const contractIds = contracts.map((c) => c._id);
+      const media = await Media.find({
+        contractId: { $in: contractIds },
+        isDeleted: false,
+      }).select("url filename originalName mimetype size contractId");
+
+      const contractsWithMedia = contracts.map((contract) => ({
+        ...contract.toObject(),
+        media: media.filter(
+          (m) => m.contractId?.toString() === contract._id.toString()
+        ),
+      }));
+
       res.status(200).json(
         createResponse({
           status: 200,
           success: true,
           message: "Contracts retrieved successfully",
-          data: { contracts, total, page: Number(page), limit: Number(limit) },
+          data: {
+            contracts: contractsWithMedia,
+            total,
+            page: Number(page),
+            limit: Number(limit),
+          },
         })
       );
     } catch (error) {
