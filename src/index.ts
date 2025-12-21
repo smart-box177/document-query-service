@@ -2,7 +2,7 @@ import cors from "cors";
 import http from "http";
 import color from "colors";
 import morgan from "morgan";
-import router from "./routes";
+import { rootRouter as router } from "./routes";
 import { connectDB } from "./db";
 import { SocketService } from "./socket";
 import { PORT, ALLOWED_ORIGINS } from "./constant";

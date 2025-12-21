@@ -1,5 +1,6 @@
 import { AuthRouter } from "./auth.route";
 import { ContractRouter } from "./contract.route";
+import { MediaRouter } from "./media.route";
 import { Request, Response, Router } from "express";
 import { createResponse } from "../helpers/response";
 
@@ -19,4 +20,6 @@ router.use("/auth", AuthRouter);
 
 router.use("/contracts", ContractRouter);
 
-export default router;
+router.use("/media", MediaRouter);
+
+export { router as rootRouter };
