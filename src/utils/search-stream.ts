@@ -109,6 +109,7 @@ export async function searchContractsWithSummary(
               message: `Reading document for ${contract.contractTitle}...`,
             });
 
+            console.log(`Attempting to read PDF from: ${pdfMedia.url}`);
             const pdfText = await readPdfFromUrl(pdfMedia.url, 500);
 
             if (pdfText && pdfText.length > 50) {
@@ -118,7 +119,7 @@ export async function searchContractsWithSummary(
 
               const summaryPrompt = `Summarize this contract document in 2-3 sentences. Focus on key terms, parties involved, and main obligations:\n\n${pdfText}`;
 
-              const response = await search(summaryPrompt)
+              const response = await search(summaryPrompt);
 
               documentSummary = response.text || null;
             }
