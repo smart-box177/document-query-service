@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { createResponse } from "../helpers/response";
 import { Contract } from "../models/contract.model";
+import { Media } from "../models/media.model";
 import APIError from "../helpers/api.error";
 
 export class ContractController {
@@ -65,12 +66,17 @@ export class ContractController {
         throw new APIError({ message: "Contract not found", status: 404 });
       });
 
+      const media = await Media.find({
+        contractId: id,
+        isDeleted: false,
+      }).select("url filename originalName mimetype size");
+
       res.status(200).json(
         createResponse({
           status: 200,
           success: true,
           message: "Contract retrieved successfully",
-          data: contract,
+          data: { ...contract.toObject(), media },
         })
       );
     } catch (error) {
@@ -141,12 +147,25 @@ export class ContractController {
         ],
       }).limit(20);
 
+      const contractIds = contracts.map((c) => c._id);
+      const media = await Media.find({
+        contractId: { $in: contractIds },
+        isDeleted: false,
+      }).select("url filename originalName mimetype size contractId");
+
+      const contractsWithMedia = contracts.map((contract) => ({
+        ...contract.toObject(),
+        media: media.filter(
+          (m) => m.contractId?.toString() === contract._id.toString()
+        ),
+      }));
+
       res.status(200).json(
         createResponse({
           status: 200,
           success: true,
           message: "Search results retrieved successfully",
-          data: contracts,
+          data: contractsWithMedia,
         })
       );
     } catch (error) {
