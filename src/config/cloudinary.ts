@@ -12,11 +12,15 @@ cloudinary.config({
   api_secret: CLOUDINARY_API_SECRET,
 });
 
-const ALLOWED_FORMATS = [
-  "jpg",
-  "jpeg",
-  "png",
-  "gif",
+enum CloudinaryResourceType {
+  IMAGE = "image",
+  VIDEO = "video",
+  RAW = "raw",
+  AUTO = "auto",
+}
+
+const IMAGE_FORMATS = ["jpg", "jpeg", "png", "gif"];
+const DOCUMENT_FORMATS = [
   "pdf",
   "doc",
   "docx",
@@ -26,15 +30,31 @@ const ALLOWED_FORMATS = [
   "pptx",
   "txt",
 ];
+const ALLOWED_FORMATS = [...IMAGE_FORMATS, ...DOCUMENT_FORMATS];
+
+const getResourceType = (format: string): CloudinaryResourceType => {
+  if (IMAGE_FORMATS.includes(format.toLowerCase())) {
+    return CloudinaryResourceType.IMAGE;
+  }
+  if (DOCUMENT_FORMATS.includes(format.toLowerCase())) {
+    return CloudinaryResourceType.RAW;
+  }
+  return CloudinaryResourceType.AUTO;
+};
 
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
-  params: {
-    folder: "f3d-suite/media",
-    allowed_formats: ALLOWED_FORMATS,
-    resource_type: "auto",
-    transformation: [{ quality: "auto" }],
-  } as any,
+  params: async (_req, file) => {
+    const ext = file.originalname.split(".").pop()?.toLowerCase() || "";
+    return {
+      folder: "doc_query/media",
+      allowed_formats: ALLOWED_FORMATS,
+      resource_type: getResourceType(ext),
+      transformation: IMAGE_FORMATS.includes(ext)
+        ? [{ quality: "auto" }]
+        : undefined,
+    };
+  },
 });
 
-export { storage, ALLOWED_FORMATS };
+export { storage, ALLOWED_FORMATS, CloudinaryResourceType, getResourceType };
