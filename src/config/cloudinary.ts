@@ -49,7 +49,8 @@ const storage = new CloudinaryStorage({
     return {
       folder: "doc_query/media",
       allowed_formats: ALLOWED_FORMATS,
-      resource_type: getResourceType(ext),
+      // resource_type: getResourceType(ext),
+      resource_type: "auto",
       transformation: IMAGE_FORMATS.includes(ext)
         ? [{ quality: "auto" }]
         : undefined,

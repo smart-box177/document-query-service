@@ -10,6 +10,19 @@ interface CloudinaryFile extends Express.Multer.File {
   filename: string;
 }
 
+const getFileExtension = (filename: string): string => {
+  const ext = filename.split(".").pop()?.toLowerCase();
+  return ext ? `.${ext}` : "";
+};
+
+const appendExtensionToUrl = (url: string, originalName: string): string => {
+  const ext = getFileExtension(originalName);
+  if (ext && url.includes("/raw/upload/") && !url.endsWith(ext)) {
+    return `${url}${ext}`;
+  }
+  return url;
+};
+
 export class MediaController {
   public static async uploadMedia(
     req: Request,
@@ -26,6 +39,7 @@ export class MediaController {
 
       const file = req.file as CloudinaryFile;
       const { uploadedBy, contractId, tags } = req.body;
+      // const url = appendExtensionToUrl(file.path, file.originalname);
 
       const media = await Media.create({
         url: file.path,
@@ -70,7 +84,7 @@ export class MediaController {
       const parsedTags = tags ? JSON.parse(tags) : [];
 
       const mediaData = files.map((file) => ({
-        url: file.path,
+        url: appendExtensionToUrl(file.path, file.originalname),
         filename: file.filename,
         originalName: file.originalname,
         mimetype: file.mimetype,
