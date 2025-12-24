@@ -4,6 +4,9 @@ import APIError from "../helpers/api.error";
 import HttpStatus from "http-status";
 import { Media } from "../models/media.model";
 import { v2 as cloudinary } from "cloudinary";
+import { Contract } from "../models/contract.model";
+import axios from "axios";
+import archiver from "archiver";
 
 interface CloudinaryFile extends Express.Multer.File {
   path: string;
@@ -39,6 +42,7 @@ export class MediaController {
 
       const file = req.file as CloudinaryFile;
       const { uploadedBy, contractId, tags } = req.body;
+      console.log("file path " + file.path);
       // const url = appendExtensionToUrl(file.path, file.originalname);
 
       const media = await Media.create({
@@ -188,6 +192,77 @@ export class MediaController {
           message: "Media deleted successfully",
         })
       );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public static async downloadContractZip(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { contractId } = req.params;
+
+      const contract = await Contract.findById(contractId);
+      if (!contract) {
+        throw new APIError({
+          message: "Contract not found",
+          status: HttpStatus.NOT_FOUND,
+        });
+      }
+
+      const mediaFiles = await Media.find({
+        contractId,
+        isDeleted: false,
+      });
+
+      if (mediaFiles.length === 0) {
+        throw new APIError({
+          message: "No files found for this contract",
+          status: HttpStatus.NOT_FOUND,
+        });
+      }
+
+      // Generate safe filename from contract title
+      const safeTitle = (contract.contractTitle || "contract")
+        .replace(/[^a-zA-Z0-9]/g, "_")
+        .substring(0, 50);
+      const zipFilename = `${safeTitle}_documents.zip`;
+
+      res.setHeader("Content-Type", "application/zip");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${zipFilename}"`
+      );
+
+      const archive = archiver("zip", { zlib: { level: 5 } });
+
+      archive.on("error", (err) => {
+        throw new APIError({
+          message: `Archive error: ${err.message}`,
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+        });
+      });
+
+      archive.pipe(res);
+
+      // Download and add each file to the archive
+      for (const file of mediaFiles) {
+        try {
+          const response = await axios.get(file.url, {
+            responseType: "stream",
+          });
+          const filename = file.originalName || file.filename;
+          archive.append(response.data, { name: filename });
+        } catch (err) {
+          console.error(`Failed to fetch file ${file.url}:`, err);
+          // Continue with other files even if one fails
+        }
+      }
+
+      await archive.finalize();
     } catch (error) {
       next(error);
     }

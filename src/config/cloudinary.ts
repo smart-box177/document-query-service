@@ -46,11 +46,12 @@ const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: async (_req, file) => {
     const ext = file.originalname.split(".").pop()?.toLowerCase() || "";
+    console.log("file path " + file.path)
     return {
       folder: "doc_query/media",
       allowed_formats: ALLOWED_FORMATS,
-      // resource_type: getResourceType(ext),
-      resource_type: "auto",
+      resource_type: getResourceType(ext),
+      // resource_type: "auto",
       transformation: IMAGE_FORMATS.includes(ext)
         ? [{ quality: "auto" }]
         : undefined,

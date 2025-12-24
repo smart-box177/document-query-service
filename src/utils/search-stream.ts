@@ -86,12 +86,20 @@ export async function searchContractsWithSummary(
       isDeleted: false,
     }).select("url filename originalName mimetype size contractId");
 
-    const contractsWithMedia = contracts.map((contract) => ({
-      ...contract.toObject(),
-      media: media.filter(
+    const contractsWithMedia = contracts.map((contract) => {
+      const contractMedia = media.filter(
         (m) => m.contractId?.toString() === contract._id.toString()
-      ),
-    }));
+      );
+      return {
+        ...contract.toObject(),
+        media: contractMedia,
+        // Add zip download URL for contracts with multiple files
+        zipUrl:
+          contractMedia.length > 1
+            ? `/api/media/zip/${contract._id.toString()}`
+            : null,
+      };
+    });
 
     // Stream each contract with document summary
     for (const contract of contractsWithMedia) {
