@@ -203,4 +203,105 @@ export class ContractController {
       next(error);
     }
   }
+
+  // Get user's search history
+  public static async getSearchHistory(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        throw new APIError({ message: "Unauthorized", status: 401 });
+      }
+
+      const { page = 1, limit = 50 } = req.query;
+
+      const history = await SearchHistory.find({ userId })
+        .sort({ createdAt: -1 })
+        .skip((Number(page) - 1) * Number(limit))
+        .limit(Number(limit));
+
+      const total = await SearchHistory.countDocuments({ userId });
+
+      res.status(200).json(
+        createResponse({
+          status: 200,
+          success: true,
+          message: "Search history retrieved",
+          data: {
+            history,
+            total,
+            page: Number(page),
+            limit: Number(limit),
+          },
+        })
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Delete a single history entry
+  public static async deleteSearchHistory(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        throw new APIError({ message: "Unauthorized", status: 401 });
+      }
+
+      const { historyId } = req.params;
+
+      const history = await SearchHistory.findOneAndDelete({
+        _id: historyId,
+        userId,
+      });
+
+      if (!history) {
+        throw new APIError({ message: "History entry not found", status: 404 });
+      }
+
+      res.status(200).json(
+        createResponse({
+          status: 200,
+          success: true,
+          message: "History entry deleted",
+        })
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Clear all search history for user
+  public static async clearSearchHistory(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        throw new APIError({ message: "Unauthorized", status: 401 });
+      }
+
+      const result = await SearchHistory.deleteMany({ userId });
+
+      res.status(200).json(
+        createResponse({
+          status: 200,
+          success: true,
+          message: `Cleared ${result.deletedCount} history entries`,
+          data: { deletedCount: result.deletedCount },
+        })
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
 }
