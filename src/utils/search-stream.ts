@@ -1,6 +1,7 @@
 import { Socket } from "socket.io";
 import { Contract } from "../models/contract.model";
 import { Media } from "../models/media.model";
+import { SearchHistory } from "../models/history.model";
 import { readPdfFromUrl } from "./pdf-reader";
 import { AI, search } from "../services/gemini.service";
 
@@ -40,12 +41,19 @@ function isPdfAccessError(error: unknown): boolean {
 /**
  * Performs a contract search with AI-powered document summarization
  * Streams results back to the client via socket
+ * @param socket - Socket.io socket instance
+ * @param query - Search query string
+ * @param userId - Optional user ID for saving search history
+ * @param tab - Optional tab identifier (all, contracts, documents, etc.)
  */
 export async function searchContractsWithSummary(
   socket: Socket,
-  query: string
+  query: string,
+  userId?: string,
+  tab: string = "all"
 ): Promise<void> {
   let aiAvailable = true;
+  let resultsCount = 0;
 
   try {
     if (!query) {
@@ -201,10 +209,24 @@ export async function searchContractsWithSummary(
       });
     }
 
+    resultsCount = contractsWithMedia.length;
+
     socket.emit("contract:search:complete", {
       message: "Search completed",
       total: contractsWithMedia.length,
     });
+
+    // Save search history if user is authenticated
+    if (userId) {
+      await SearchHistory.create({
+        userId,
+        query: searchQuery,
+        resultsCount,
+        tab,
+      }).catch((err) => {
+        console.error("Failed to save search history:", err);
+      });
+    }
   } catch (error) {
     const err = error instanceof Error ? error.message : "Unknown error";
     socket.emit("contract:search:error", { message: err });

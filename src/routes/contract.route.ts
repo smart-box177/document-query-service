@@ -1,9 +1,12 @@
 import { Router } from "express";
 import { ContractController } from "../controllers/contract.controller";
+import { optionalAuthMiddleware } from "../middleware/optional-auth.middleware";
 
 const router = Router();
 
-router.route("/search").get(ContractController.search);
+router
+  .route("/search")
+  .get(optionalAuthMiddleware, ContractController.search);
 
 router
   .route("/")

@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { createResponse } from "../helpers/response";
 import { Contract } from "../models/contract.model";
 import { Media } from "../models/media.model";
+import { SearchHistory } from "../models/history.model";
 import APIError from "../helpers/api.error";
 
 export class ContractController {
@@ -146,7 +147,7 @@ export class ContractController {
 
   public static async search(req: Request, res: Response, next: NextFunction) {
     try {
-      const { q } = req.query;
+      const { q, tab = "all" } = req.query;
 
       if (!q) {
         throw new APIError({
@@ -177,6 +178,18 @@ export class ContractController {
           (m) => m.contractId?.toString() === contract._id.toString()
         ),
       }));
+
+      // Save search history if user is authenticated
+      if (req.user?.id) {
+        await SearchHistory.create({
+          userId: req.user.id,
+          query: searchQuery,
+          resultsCount: contracts.length,
+          tab: String(tab),
+        }).catch(() => {
+          // Silently fail - history is not critical
+        });
+      }
 
       res.status(200).json(
         createResponse({
