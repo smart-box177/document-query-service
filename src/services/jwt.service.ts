@@ -1,13 +1,38 @@
 import {
   sign,
   verify,
-  SignOptions,
   TokenExpiredError,
   JsonWebTokenError,
+  type SignOptions,
 } from "jsonwebtoken";
 import APIError from "../helpers/api.error";
 import { JWT_EXPIRY, JWT_SECRET } from "../constant";
 import { TokenPayload, AccessTokenPayload } from "../interfaces/params";
+
+// Default to 7 days if not set - convert to seconds for numeric expiry
+const getExpirySeconds = (): number => {
+  const expiry = JWT_EXPIRY || "7d";
+  // Parse string like "7d", "24h", "60m" to seconds
+  const match = expiry.match(/^(\d+)([dhms])$/);
+  if (match) {
+    const value = parseInt(match[1]);
+    const unit = match[2];
+    switch (unit) {
+      case "d":
+        return value * 24 * 60 * 60;
+      case "h":
+        return value * 60 * 60;
+      case "m":
+        return value * 60;
+      case "s":
+        return value;
+    }
+  }
+  // Default to 7 days in seconds
+  return 7 * 24 * 60 * 60;
+};
+
+const TOKEN_EXPIRY_SECONDS = getExpirySeconds();
 
 /**
  * Function to sign token
@@ -16,13 +41,13 @@ import { TokenPayload, AccessTokenPayload } from "../interfaces/params";
  * @throws {Error} - Throws an error if token is invalid or missing
  */
 export const signToken = async (payload: TokenPayload): Promise<string> => {
-  const options: SignOptions = {
-    expiresIn: JWT_EXPIRY as unknown as number,
-  };
-
   if (!JWT_SECRET) {
     throw new Error("JWT_SECRET is not defined");
   }
+
+  const options: SignOptions = {
+    expiresIn: TOKEN_EXPIRY_SECONDS,
+  };
 
   return sign(payload, JWT_SECRET, options);
 };
@@ -36,13 +61,13 @@ export const signToken = async (payload: TokenPayload): Promise<string> => {
 export const generateAccessToken = async (
   payload: AccessTokenPayload
 ): Promise<string> => {
-  const options: SignOptions = {
-    expiresIn: JWT_EXPIRY as unknown as number,
-  };
-
   if (!JWT_SECRET) {
     throw new Error("JWT_SECRET is not defined");
   }
+
+  const options: SignOptions = {
+    expiresIn: TOKEN_EXPIRY_SECONDS,
+  };
 
   return new Promise((resolve, reject) => {
     sign(payload, JWT_SECRET, options, (err, token) => {
@@ -68,13 +93,13 @@ export const generateAccessToken = async (
 export const signResetToken = async (
   payload: TokenPayload
 ): Promise<string> => {
-  const options: SignOptions = {
-    expiresIn: JWT_EXPIRY as unknown as number,
-  };
-
   if (!JWT_SECRET) {
     throw new Error("JWT_SECRET is not defined");
   }
+
+  const options: SignOptions = {
+    expiresIn: TOKEN_EXPIRY_SECONDS,
+  };
 
   return sign(payload, JWT_SECRET, options);
 };

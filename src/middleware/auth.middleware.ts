@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { verify } from "jsonwebtoken";
+import { verify, TokenExpiredError, JsonWebTokenError } from "jsonwebtoken";
 import { JWT_SECRET } from "../constant";
 import APIError from "../helpers/api.error";
 import { User } from "../models/user.model";
@@ -8,6 +8,8 @@ interface JwtPayload {
   user_id?: string;
   userId?: string;
   email?: string;
+  iat?: number;
+  exp?: number;
 }
 
 declare global {
@@ -40,6 +42,7 @@ export const authMiddleware = async (
     }
 
     const token = authHeader.split(" ")[1];
+    console.log(token);
 
     if (!token) {
       throw new APIError({
@@ -48,8 +51,28 @@ export const authMiddleware = async (
       });
     }
 
-    const decoded = verify(token, JWT_SECRET) as JwtPayload;
-    const userId = decoded.user_id || decoded.userId;
+    let decoded: JwtPayload;
+    try {
+      decoded = verify(token, JWT_SECRET) as JwtPayload;
+    } catch (err) {
+      if (err instanceof TokenExpiredError) {
+        throw new APIError({
+          message: "Token has expired",
+          status: 401,
+        });
+      }
+      if (err instanceof JsonWebTokenError) {
+        throw new APIError({
+          message: "Invalid token",
+          status: 401,
+        });
+      }
+      throw err;
+    }
+
+    // Handle both payload formats: user_id (from signin) and userId (from Google signin)
+    const userId = decoded?.user_id || decoded?.userId;
+
 
     if (!userId) {
       throw new APIError({
@@ -71,7 +94,7 @@ export const authMiddleware = async (
       id: user._id.toString(),
       email: user.email,
       username: user.username,
-      role: user.role!,
+      role: user.role || "user",
       avatar: user.avatar,
     };
 
@@ -82,7 +105,7 @@ export const authMiddleware = async (
     } else {
       next(
         new APIError({
-          message: "Invalid or expired token",
+          message: "Authentication failed",
           status: 401,
         })
       );

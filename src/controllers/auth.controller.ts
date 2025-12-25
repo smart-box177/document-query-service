@@ -4,8 +4,6 @@ import { createResponse } from "../helpers/response";
 import { AuthProvider } from "../interfaces/user";
 import { User } from "../models/user.model";
 import { google } from "googleapis";
-import jwt from "jsonwebtoken";
-import { JWT_SECRET, JWT_EXPIRY } from "../constant";
 import { signToken } from "../services/jwt.service";
 import APIError from "../helpers/api.error";
 
@@ -84,12 +82,13 @@ export class AuthController {
         }
       }
 
-      const accessToken = jwt.sign({ userId: user._id }, JWT_SECRET, {
-        expiresIn: JWT_EXPIRY as jwt.SignOptions["expiresIn"],
-      });
-      const refreshToken = jwt.sign({ userId: user._id }, JWT_SECRET, {
-        expiresIn: JWT_EXPIRY as jwt.SignOptions["expiresIn"],
-      });
+      const payload = {
+        user_id: user._id.toString(),
+        email: user.email,
+      };
+
+      const accessToken = await signToken(payload);
+      const refreshToken = await signToken(payload);
 
       res.json(
         createResponse({
