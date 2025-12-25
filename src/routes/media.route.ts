@@ -1,8 +1,11 @@
 import { Router } from "express";
 import { MediaController } from "../controllers/media.controller";
 import { uploadMiddleware } from "../middleware/upload.middleware";
+import { authenticateUser } from "../middleware/auth.middleware";
 
 const router = Router();
+
+router.use(authenticateUser);
 
 router
   .route("/")

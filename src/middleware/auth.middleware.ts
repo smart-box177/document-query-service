@@ -3,6 +3,7 @@ import { verify, TokenExpiredError, JsonWebTokenError } from "jsonwebtoken";
 import { JWT_SECRET } from "../constant";
 import APIError from "../helpers/api.error";
 import { User } from "../models/user.model";
+import HttpStatus from 'http-status';
 
 interface JwtPayload {
   user_id?: string;
@@ -26,23 +27,28 @@ declare global {
   }
 }
 
-export const authMiddleware = async (
+/*
+ * Middleware to authenticate user based on JWT token
+ * @param req - Express request object
+ * @param res - Express response object
+ * @param next - Express next function
+ */
+export const authenticateUser = async (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
+): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       throw new APIError({
-        message: "No token provided",
+        message: "Authentication required. Please provide a valid token.",
         status: 401,
       });
     }
 
     const token = authHeader.split(" ")[1];
-    console.log(token);
 
     if (!token) {
       throw new APIError({
@@ -72,7 +78,6 @@ export const authMiddleware = async (
 
     // Handle both payload formats: user_id (from signin) and userId (from Google signin)
     const userId = decoded?.user_id || decoded?.userId;
-
 
     if (!userId) {
       throw new APIError({
