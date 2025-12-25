@@ -148,14 +148,25 @@ export class AuthController {
         email: user.email,
       };
 
-      const token = await signToken(payload);
+      const accessToken = await signToken(payload);
+      const refreshToken = await signToken(payload); // In production, use different expiry
 
       res.status(200).json(
         createResponse({
           status: 200,
           success: true,
           message: "User logged in successfully",
-          data: { user, token },
+          data: {
+            user: {
+              id: user._id,
+              username: user.username,
+              email: user.email,
+              avatar: user.avatar,
+              role: user.role,
+            },
+            accessToken,
+            refreshToken,
+          },
         })
       );
     } catch (error) {
@@ -181,6 +192,28 @@ export class AuthController {
           success: true,
           message: "User verified successfully",
           data: user,
+        })
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public static async me(req: Request, res: Response, next: NextFunction) {
+    try {
+      // req.user is set by authMiddleware
+      if (!req.user) {
+        throw new APIError({ message: "Not authenticated", status: 401 });
+      }
+
+      res.status(200).json(
+        createResponse({
+          status: 200,
+          success: true,
+          message: "User retrieved successfully",
+          data: {
+            user: req.user,
+          },
         })
       );
     } catch (error) {
