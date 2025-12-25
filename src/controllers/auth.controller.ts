@@ -3,6 +3,7 @@ import { oauth2Client } from "../services/google.service";
 import { createResponse } from "../helpers/response";
 import { AuthProvider } from "../interfaces/user";
 import { User } from "../models/user.model";
+import { SearchHistory } from "../models/history.model";
 import { google } from "googleapis";
 import { signToken } from "../services/jwt.service";
 import APIError from "../helpers/api.error";
@@ -90,6 +91,12 @@ export class AuthController {
       const accessToken = await signToken(payload);
       const refreshToken = await signToken(payload);
 
+      // Get top 5 recent searches for this user
+      const recentSearches = await SearchHistory.find({ userId: user._id })
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .select("query resultsCount tab createdAt");
+
       res.json(
         createResponse({
           status: 200,
@@ -105,6 +112,7 @@ export class AuthController {
             },
             accessToken,
             refreshToken,
+            recentSearches,
             googleUser,
           },
         })
@@ -150,6 +158,12 @@ export class AuthController {
       const accessToken = await signToken(payload);
       const refreshToken = await signToken(payload); // In production, use different expiry
 
+      // Get top 5 recent searches for this user
+      const recentSearches = await SearchHistory.find({ userId: user._id })
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .select("query resultsCount tab createdAt");
+
       res.status(200).json(
         createResponse({
           status: 200,
@@ -165,6 +179,7 @@ export class AuthController {
             },
             accessToken,
             refreshToken,
+            recentSearches,
           },
         })
       );
@@ -205,6 +220,12 @@ export class AuthController {
         throw new APIError({ message: "Not authenticated", status: 401 });
       }
 
+      // Get top 5 recent searches for this user
+      const recentSearches = await SearchHistory.find({ userId: req.user.id })
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .select("query resultsCount tab createdAt");
+
       res.status(200).json(
         createResponse({
           status: 200,
@@ -212,6 +233,7 @@ export class AuthController {
           message: "User retrieved successfully",
           data: {
             user: req.user,
+            recentSearches,
           },
         })
       );
