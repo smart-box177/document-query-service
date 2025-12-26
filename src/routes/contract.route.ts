@@ -32,6 +32,32 @@ router
   .post(ContractController.addBookmark)
   .delete(ContractController.removeBookmark);
 
+// User archive routes (require authentication)
+router
+  .route("/archive/user")
+  .get(ContractController.getUserArchive)
+  .delete(ContractController.clearUserArchive);
+
+router
+  .route("/archive/user/:contractId")
+  .post(ContractController.archiveForUser)
+  .delete(ContractController.restoreForUser);
+
+// Global archive routes (admin only)
+router
+  .route("/archive/global")
+  .get(ContractController.getGlobalArchive)
+  .delete(ContractController.emptyGlobalArchive);
+
+router
+  .route("/archive/global/:contractId")
+  .post(ContractController.archiveGlobally)
+  .delete(ContractController.restoreGlobally);
+
+router
+  .route("/archive/global/:contractId/permanent")
+  .delete(ContractController.permanentlyDelete);
+
 // Contract CRUD routes
 router.route("/").get(ContractController.getAll).post(ContractController.create);
 

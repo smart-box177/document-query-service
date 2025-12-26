@@ -12,6 +12,10 @@ const contractSchema = new Schema(
     contractValue: { type: String },
     documentURLS: [{ type: String }],
     hasDocument: { type: Boolean, default: false },
+    // Admin-level archive fields
+    isArchived: { type: Boolean, default: false, index: true },
+    archivedAt: { type: Date },
+    archivedBy: { type: Schema.Types.ObjectId, ref: "user" },
   },
   { timestamps: true }
 );

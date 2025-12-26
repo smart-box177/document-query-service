@@ -15,19 +15,25 @@ export interface IBookmark {
   bookmarkedAt: Date;
 }
 
+export interface IArchivedContract {
+  contractId: Types.ObjectId;
+  archivedAt: Date;
+}
+
 export interface IUser {
   email: string;
-  username: string;
   role?: UserRole;
   avatar?: string;
+  username: string;
+  lastLogin?: Date;
   lastname?: string;
   password?: string;
   googleId?: string;
-  lastLogin?: Date;
   firstname?: string;
+  bookmarks?: IBookmark[];
   isEmailVerified?: boolean;
   authProvider?: AuthProvider;
-  bookmarks?: IBookmark[];
+  archivedContracts?: IArchivedContract[];
 }
 
 export interface IUserDocument extends IUser, Document {
