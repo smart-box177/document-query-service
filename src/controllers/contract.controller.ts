@@ -3,6 +3,7 @@ import { createResponse } from "../helpers/response";
 import { Contract } from "../models/contract.model";
 import { Media } from "../models/media.model";
 import { SearchHistory } from "../models/history.model";
+import { User } from "../models/user.model";
 import APIError from "../helpers/api.error";
 
 export class ContractController {
@@ -298,6 +299,192 @@ export class ContractController {
           success: true,
           message: `Cleared ${result.deletedCount} history entries`,
           data: { deletedCount: result.deletedCount },
+        })
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Get user's bookmarks with contract details
+  public static async getBookmarks(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        throw new APIError({ message: "Unauthorized", status: 401 });
+      }
+
+      const user = await User.findById(userId).select("bookmarks");
+      if (!user) {
+        throw new APIError({ message: "User not found", status: 404 });
+      }
+
+      const bookmarks = user.bookmarks || [];
+      const contractIds = bookmarks.map((b) => b.contractId);
+
+      // Get contract details for all bookmarks
+      const contracts = await Contract.find({ _id: { $in: contractIds } });
+
+      // Map bookmarks with contract details
+      const bookmarksWithDetails = bookmarks
+        .map((bookmark) => {
+          const contract = contracts.find(
+            (c) => c._id.toString() === bookmark.contractId.toString()
+          );
+          if (!contract) return null;
+          return {
+            id: contract._id,
+            contractTitle: contract.contractTitle,
+            operator: contract.operator,
+            contractorName: contract.contractorName,
+            contractNumber: contract.contractNumber,
+            year: contract.year,
+            contractValue: contract.contractValue,
+            bookmarkedAt: bookmark.bookmarkedAt,
+          };
+        })
+        .filter(Boolean);
+
+      res.status(200).json(
+        createResponse({
+          status: 200,
+          success: true,
+          message: "Bookmarks retrieved",
+          data: {
+            bookmarks: bookmarksWithDetails,
+            total: bookmarksWithDetails.length,
+          },
+        })
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Add a bookmark
+  public static async addBookmark(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        throw new APIError({ message: "Unauthorized", status: 401 });
+      }
+
+      const { contractId } = req.params;
+
+      // Verify contract exists
+      const contract = await Contract.findById(contractId);
+      if (!contract) {
+        throw new APIError({ message: "Contract not found", status: 404 });
+      }
+
+      // Check if already bookmarked
+      const user = await User.findById(userId);
+      if (!user) {
+        throw new APIError({ message: "User not found", status: 404 });
+      }
+
+      const existingBookmark = user.bookmarks?.find(
+        (b) => b.contractId.toString() === contractId
+      );
+
+      if (existingBookmark) {
+        throw new APIError({
+          message: "Contract already bookmarked",
+          status: 400,
+        });
+      }
+
+      // Add bookmark
+      await User.findByIdAndUpdate(userId, {
+        $push: {
+          bookmarks: {
+            contractId,
+            bookmarkedAt: new Date(),
+          },
+        },
+      });
+
+      res.status(201).json(
+        createResponse({
+          status: 201,
+          success: true,
+          message: "Contract bookmarked",
+          data: {
+            contractId,
+            contractTitle: contract.contractTitle,
+          },
+        })
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Remove a bookmark
+  public static async removeBookmark(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        throw new APIError({ message: "Unauthorized", status: 401 });
+      }
+
+      const { contractId } = req.params;
+
+      const result = await User.findByIdAndUpdate(userId, {
+        $pull: {
+          bookmarks: { contractId },
+        },
+      });
+
+      if (!result) {
+        throw new APIError({ message: "User not found", status: 404 });
+      }
+
+      res.status(200).json(
+        createResponse({
+          status: 200,
+          success: true,
+          message: "Bookmark removed",
+        })
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Clear all bookmarks
+  public static async clearBookmarks(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        throw new APIError({ message: "Unauthorized", status: 401 });
+      }
+
+      await User.findByIdAndUpdate(userId, {
+        $set: { bookmarks: [] },
+      });
+
+      res.status(200).json(
+        createResponse({
+          status: 200,
+          success: true,
+          message: "All bookmarks cleared",
         })
       );
     } catch (error) {

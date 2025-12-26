@@ -1,5 +1,4 @@
-import { model, Model } from "mongoose";
-import { Schema } from "mongoose";
+import { model, Model, Schema } from "mongoose";
 import { compare, hash } from "bcrypt";
 import { SALT_ROUNDS } from "../constant";
 import {
@@ -8,6 +7,21 @@ import {
   IUserDocument,
   UserRole,
 } from "../interfaces/user";
+
+const bookmarkSchema = new Schema(
+  {
+    contractId: {
+      type: Schema.Types.ObjectId,
+      ref: "contract",
+      required: true,
+    },
+    bookmarkedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: false }
+);
 
 const userSchema = new Schema<IUserDocument, Model<IUserDocument>, IUser>(
   {
@@ -50,6 +64,10 @@ const userSchema = new Schema<IUserDocument, Model<IUserDocument>, IUser>(
       type: String,
       enum: Object.values(UserRole),
       default: UserRole.USER,
+    },
+    bookmarks: {
+      type: [bookmarkSchema],
+      default: [],
     },
   },
   { timestamps: true }

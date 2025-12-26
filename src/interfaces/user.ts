@@ -1,4 +1,4 @@
-import { Document } from "mongoose";
+import { Document, Types } from "mongoose";
 
 export enum AuthProvider {
   LOCAL = "local",
@@ -8,6 +8,11 @@ export enum AuthProvider {
 export enum UserRole {
   ADMIN = "admin",
   USER = "user",
+}
+
+export interface IBookmark {
+  contractId: Types.ObjectId;
+  bookmarkedAt: Date;
 }
 
 export interface IUser {
@@ -22,6 +27,7 @@ export interface IUser {
   firstname?: string;
   isEmailVerified?: boolean;
   authProvider?: AuthProvider;
+  bookmarks?: IBookmark[];
 }
 
 export interface IUserDocument extends IUser, Document {
