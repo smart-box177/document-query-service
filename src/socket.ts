@@ -15,6 +15,7 @@ interface AuthenticatedSocket extends Socket {
     id: string;
     email: string;
     username: string;
+    archivedContractIds: string[];
   };
 }
 
@@ -46,6 +47,9 @@ export class SocketService {
                 id: user._id.toString(),
                 email: user.email,
                 username: user.username,
+                archivedContractIds: user.archivedContracts?.map(
+                  (a) => a.contractId.toString()
+                ) || [],
               };
             }
           }
@@ -70,7 +74,8 @@ export class SocketService {
             socket,
             data.query,
             socket.user?.id,
-            data.tab
+            data.tab,
+            socket.user?.archivedContractIds
           );
         }
       );

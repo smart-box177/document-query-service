@@ -50,7 +50,8 @@ export async function searchContractsWithSummary(
   socket: Socket,
   query: string,
   userId?: string,
-  tab: string = "all"
+  tab: string = "all",
+  archivedContractIds: string[] = []
 ): Promise<void> {
   let aiAvailable = true;
   let resultsCount = 0;
@@ -88,13 +89,18 @@ export async function searchContractsWithSummary(
       return;
     }
 
-    const contractIds = contracts.map((c) => c._id);
+    // Filter out archived contracts
+    const filteredContracts = contracts.filter(
+      (c) => !archivedContractIds.includes(c._id.toString())
+    );
+
+    const contractIds = filteredContracts.map((c) => c._id);
     const media = await Media.find({
       contractId: { $in: contractIds },
       isDeleted: false,
     }).select("url filename originalName mimetype size contractId");
 
-    const contractsWithMedia = contracts.map((contract) => {
+    const contractsWithMedia = filteredContracts.map((contract) => {
       const contractMedia = media.filter(
         (m) => m.contractId?.toString() === contract._id.toString()
       );
