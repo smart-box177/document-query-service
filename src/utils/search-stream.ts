@@ -2,7 +2,6 @@ import { Socket } from "socket.io";
 import { Contract } from "../models/contract.model";
 import { Media } from "../models/media.model";
 import { SearchHistory } from "../models/history.model";
-import { User } from "../models/user.model";
 import { readPdfFromUrl } from "./pdf-reader";
 import { AI, search } from "../services/gemini.service";
 
@@ -67,19 +66,7 @@ export async function searchContractsWithSummary(
     socket.emit("contract:search:start", { message: "Search started" });
 
     const searchQuery = String(query);
-
-    // Get user's archived contracts to exclude from results
-    let userArchivedIds: string[] = [];
-    if (userId) {
-      const user = await User.findById(userId).select("archivedContracts");
-      userArchivedIds = (user?.archivedContracts || []).map((a) =>
-        a.contractId.toString()
-      );
-    }
-
     const contracts = await Contract.find({
-      isArchived: false, // Exclude globally archived contracts
-      ...(userArchivedIds.length > 0 && { _id: { $nin: userArchivedIds } }), // Exclude user's archived
       $or: [
         { contractTitle: { $regex: searchQuery, $options: "i" } },
         { contractorName: { $regex: searchQuery, $options: "i" } },
