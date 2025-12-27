@@ -8,6 +8,83 @@ import { User } from "../models/user.model";
 import APIError from "../helpers/api.error";
 
 export class ContractController {
+  /**
+   * Parse year and month from search query
+   * Supports formats like: "2024", "June 2024", "2024 June", "Jun 2024", "06/2024"
+   */
+  private static parseDateFromQuery(query: string): {
+    cleanQuery: string;
+    year?: number;
+    month?: number;
+  } {
+    const monthNames: Record<string, number> = {
+      january: 1,
+      jan: 1,
+      february: 2,
+      feb: 2,
+      march: 3,
+      mar: 3,
+      april: 4,
+      apr: 4,
+      may: 5,
+      june: 6,
+      jun: 6,
+      july: 7,
+      jul: 7,
+      august: 8,
+      aug: 8,
+      september: 9,
+      sep: 9,
+      sept: 9,
+      october: 10,
+      oct: 10,
+      november: 11,
+      nov: 11,
+      december: 12,
+      dec: 12,
+    };
+
+    let cleanQuery = query;
+    let year: number | undefined;
+    let month: number | undefined;
+
+    // Match numeric month format first (01/2024, 1/2024, 01-2024)
+    const numericMonthMatch = query.match(/\b(\d{1,2})[\/\-](20\d{2})\b/);
+    if (numericMonthMatch) {
+      const parsedMonth = parseInt(numericMonthMatch[1], 10);
+      if (parsedMonth >= 1 && parsedMonth <= 12) {
+        month = parsedMonth;
+        year = parseInt(numericMonthMatch[2], 10);
+        cleanQuery = cleanQuery.replace(numericMonthMatch[0], "").trim();
+      }
+    }
+
+    // Match year (4 digits between 2000-2099) if not already found
+    if (!year) {
+      const yearMatch = cleanQuery.match(/\b(20\d{2})\b/);
+      if (yearMatch) {
+        year = parseInt(yearMatch[1], 10);
+        cleanQuery = cleanQuery.replace(yearMatch[0], "").trim();
+      }
+    }
+
+    // Match month name
+    const monthPattern = new RegExp(
+      `\\b(${Object.keys(monthNames).join("|")})\\b`,
+      "i"
+    );
+    const monthMatch = cleanQuery.match(monthPattern);
+    if (monthMatch) {
+      month = monthNames[monthMatch[1].toLowerCase()];
+      cleanQuery = cleanQuery.replace(monthMatch[0], "").trim();
+    }
+
+    // Clean up extra spaces
+    cleanQuery = cleanQuery.replace(/\s+/g, " ").trim();
+
+    return { cleanQuery, year, month };
+  }
+
   public static async create(req: Request, res: Response, next: NextFunction) {
     try {
       const contract = await Contract.create(req.body);
@@ -158,7 +235,11 @@ export class ContractController {
         });
       }
 
-      const searchQuery = String(q);
+      const originalQuery = String(q);
+
+      // Parse year and month from query
+      const { cleanQuery, year, month } =
+        ContractController.parseDateFromQuery(originalQuery);
 
       // Get user's archived contracts to exclude from results
       let userArchivedIds: string[] = [];
@@ -171,15 +252,49 @@ export class ContractController {
         );
       }
 
+      // Build date filter for year/month search
+      const dateFilter: Record<string, unknown> = {};
+      if (year) {
+        const searchMonth = month ? month - 1 : 0; // 0-indexed month
+
+        // Calculate the search date range
+        let rangeStart: Date;
+        let rangeEnd: Date;
+
+        if (month) {
+          // Specific month: first day to last day of that month
+          rangeStart = new Date(year, searchMonth, 1);
+          rangeEnd = new Date(year, searchMonth + 1, 0, 23, 59, 59, 999);
+        } else {
+          // Entire year: Jan 1 to Dec 31
+          rangeStart = new Date(year, 0, 1);
+          rangeEnd = new Date(year, 11, 31, 23, 59, 59, 999);
+        }
+
+        // Find contracts where the contract period overlaps with the search range
+        dateFilter.$and = [
+          { startDate: { $lte: rangeEnd } },
+          { endDate: { $gte: rangeStart } },
+        ];
+      }
+
+      // Build text search - only if there's text after removing date parts
+      const textSearchConditions = cleanQuery
+        ? {
+            $or: [
+              { contractTitle: { $regex: cleanQuery, $options: "i" } },
+              { contractorName: { $regex: cleanQuery, $options: "i" } },
+              { operator: { $regex: cleanQuery, $options: "i" } },
+              { contractNumber: { $regex: cleanQuery, $options: "i" } },
+            ],
+          }
+        : {};
+
       const contracts = await Contract.find({
         isArchived: false, // Exclude globally archived contracts
         ...(userArchivedIds.length > 0 && { _id: { $nin: userArchivedIds } }), // Exclude user's archived
-        $or: [
-          { contractTitle: { $regex: searchQuery, $options: "i" } },
-          { contractorName: { $regex: searchQuery, $options: "i" } },
-          { operator: { $regex: searchQuery, $options: "i" } },
-          { contractNumber: { $regex: searchQuery, $options: "i" } },
-        ],
+        ...dateFilter,
+        ...textSearchConditions,
       }).limit(20);
 
       const contractIds = contracts.map((c) => c._id);
@@ -199,7 +314,7 @@ export class ContractController {
       if (req.user?.id) {
         await SearchHistory.create({
           userId: req.user.id,
-          query: searchQuery,
+          query: originalQuery,
           resultsCount: contracts.length,
           tab: String(tab),
         }).catch(() => {
