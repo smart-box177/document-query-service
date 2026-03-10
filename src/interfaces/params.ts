@@ -16,3 +16,9 @@ export interface AccessTokenPayload {
   username: string;
   role?: string;
 }
+
+export interface MailOptions {
+  to: string;
+  subject: string;
+  html: string;
+}
