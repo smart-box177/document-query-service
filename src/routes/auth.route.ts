@@ -14,6 +14,10 @@ router.route("/signin").post(AuthController.signin);
 
 router.route("/verify").post(AuthController.verifyAccount);
 
+router.route("/forgot-password").post(AuthController.forgotPassword);
+
+router.route("/reset-password").post(AuthController.resetPassword);
+
 router.use(authenticateUser);
 
 router.route("/me").get(AuthController.me);

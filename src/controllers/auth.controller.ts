@@ -9,6 +9,7 @@ import { signToken, verifyEmailToken } from "../services/jwt.service";
 import APIError from "../helpers/api.error";
 import { sendEmail } from "../services/email.service";
 import { signupEmailTemplate } from "../helpers/emails/signup";
+import { resetPasswordEmailTemplate } from "../helpers/emails/reset-password";
 
 const SCOPES = [
   "https://www.googleapis.com/auth/userinfo.email",
@@ -233,6 +234,71 @@ export class AuthController {
           success: true,
           message: "User verified successfully",
           data: user,
+        })
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public static async forgotPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email } = req.body;
+      
+      const user = await User.findOne({ email }).orFail(() => {
+        throw new APIError({ message: "User not found", status: 404 });
+      });
+      
+      // Generate password reset token
+      const resetToken = await signToken({
+        user_id: user._id.toString(),
+        email: user.email,
+      });
+      
+      const resetLink = `${process.env.CLIENT_URL}/auth/reset-password?token=${resetToken}`;
+      
+      await sendEmail({
+        to: user.email,
+        subject: "Reset Your Password - NCCC Portal",
+        html: resetPasswordEmailTemplate(user.username, resetLink),
+      });
+      
+      res.status(200).json(
+        createResponse({
+          status: 200,
+          success: true,
+          message: "Password reset link sent to your email",
+        })
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public static async resetPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { token, password } = req.body;
+      
+      if (!token || !password) {
+        throw new APIError({ message: "Token and password are required", status: 400 });
+      }
+      
+      // Verify the token
+      const decoded = await verifyEmailToken(token);
+      
+      const user = await User.findOne({ _id: decoded.user_id }).orFail(() => {
+        throw new APIError({ message: "User not found", status: 404 });
+      });
+      
+      // Update password
+      user.password = password;
+      await user.save();
+      
+      res.status(200).json(
+        createResponse({
+          status: 200,
+          success: true,
+          message: "Password reset successful",
         })
       );
     } catch (error) {
