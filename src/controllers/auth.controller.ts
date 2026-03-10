@@ -1,12 +1,14 @@
 import { NextFunction, Request, Response } from "express";
 import { oauth2Client } from "../services/google.service";
 import { createResponse } from "../helpers/response";
-import { AuthProvider } from "../interfaces/user";
+import { AuthProvider, IUserDocument } from "../interfaces/user";
 import { User } from "../models/user.model";
 import { SearchHistory } from "../models/history.model";
 import { google } from "googleapis";
-import { signToken } from "../services/jwt.service";
+import { signToken, verifyEmailToken } from "../services/jwt.service";
 import APIError from "../helpers/api.error";
+import { sendEmail } from "../services/email.service";
+import { signupEmailTemplate } from "../helpers/emails/signup";
 
 const SCOPES = [
   "https://www.googleapis.com/auth/userinfo.email",
@@ -124,12 +126,27 @@ export class AuthController {
 
   public static async signup(req: Request, res: Response, next: NextFunction) {
     try {
-      const user = await User.create(req.body);
+      const user = await User.create(req.body) as unknown as IUserDocument;
+      
+      // Send verification email
+      const verificationToken = await signToken({
+        user_id: user?._id.toString(),
+        email: user.email,
+      });
+      
+      const verificationLink = `${process.env.CLIENT_URL}/auth/verify-email?token=${verificationToken}`;
+      
+      await sendEmail({
+        to: user.email,
+        subject: "Welcome to NCCC Portal - Verify Your Email",
+        html: signupEmailTemplate(user.username, verificationLink),
+      });
+      
       res.status(201).json(
         createResponse({
           status: 201,
           success: true,
-          message: "User registered successfully",
+          message: "User registered successfully. Please check your email to verify your account.",
           data: user,
         })
       );
@@ -194,12 +211,22 @@ export class AuthController {
     next: NextFunction
   ) {
     try {
-      const { userId } = req.body;
-      const user = await User.findOne({ userId }).orFail(() => {
+      const { token } = req.query;
+      
+      if (!token || typeof token !== "string") {
+        throw new APIError({ message: "Verification token is required", status: 400 });
+      }
+      
+      // Verify the token
+      const decoded = await verifyEmailToken(token);
+      
+      const user = await User.findOne({ _id: decoded.user_id }).orFail(() => {
         throw new APIError({ message: "User not found", status: 404 });
       });
+      
       user.isEmailVerified = true;
       await user.save();
+      
       res.status(200).json(
         createResponse({
           status: 200,
@@ -242,3 +269,4 @@ export class AuthController {
     }
   }
 }
+

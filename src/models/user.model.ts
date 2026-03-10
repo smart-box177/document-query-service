@@ -70,7 +70,7 @@ const userSchema = new Schema<IUserDocument, Model<IUserDocument>, IUser>(
     avatar: {
       type: String,
     },
-    authProvider: {
+     authProvider: {
       type: String,
       enum: Object.values(AuthProvider),
       default: AuthProvider.LOCAL,
@@ -79,6 +79,10 @@ const userSchema = new Schema<IUserDocument, Model<IUserDocument>, IUser>(
       type: String,
       enum: Object.values(UserRole),
       default: UserRole.USER,
+    },
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
     },
     bookmarks: {
       type: [bookmarkSchema],

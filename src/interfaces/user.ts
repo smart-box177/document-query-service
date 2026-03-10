@@ -21,6 +21,7 @@ export interface IArchivedContract {
 }
 
 export interface IUser {
+  // _id?: string;
   email: string;
   role?: UserRole;
   avatar?: string;
