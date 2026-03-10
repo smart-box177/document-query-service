@@ -1,7 +1,7 @@
 import { config } from "dotenv";
 import { createTransport } from "nodemailer";
-import { EMAIL_PASS, EMAIL_USER } from "../constant";
 import { MailOptions } from "../interfaces/params";
+import { EMAIL_PASS, EMAIL_USER } from "../constant";
 
 config();
 
@@ -15,7 +15,7 @@ const transporter = createTransport({
 
 export const sendEmail = async (MailOptions: MailOptions) => {
   const mail = {
-    from: "arziblack2@gmail.com",
+    from: "ncccportal@gmail.com",
     to: MailOptions.to,
     subject: MailOptions.subject,
     html: MailOptions.html,
