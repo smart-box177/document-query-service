@@ -3,7 +3,7 @@
  */
 
 import httpStatus from "http-status";
-import { HttpExceptionInterface } from "types/helpers";
+import { HttpExceptionInterface } from "../../types/helpers";
 
 class HttpException extends Error {
   status: number | null;
