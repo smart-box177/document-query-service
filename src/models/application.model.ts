@@ -224,6 +224,7 @@ const sectionASchema = new Schema(
 const applicationSchema = new Schema<IApplication>(
   {
     contractId: { type: Schema.Types.ObjectId, ref: "contract" },
+    userId: { type: Schema.Types.ObjectId, ref: "user", required: true },
     status: {
       type: String,
       enum: ["DRAFT", "SUBMITTED", "REVIWING", "APPROVED", "REJECTED"],

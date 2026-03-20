@@ -4,6 +4,7 @@ import { Types } from "mongoose";
 export interface IApplication {
     id?: string;
     contractId?: Types.ObjectId;
+    userId?: Types.ObjectId;
     status?: "DRAFT" | "SUBMITTED" | "REVIWING" | "APPROVED" | "REJECTED";
     createdAt?: Date;
     updatedAt?: Date;

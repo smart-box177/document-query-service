@@ -14,7 +14,7 @@ export class ApplicationController {
     next: NextFunction
   ) {
     try {
-      const applicationData = req.body;
+      const applicationData = { ...req.body, userId: req.user?.id };
 
       const application = new Application(applicationData);
       await application.save();
@@ -61,7 +61,7 @@ export class ApplicationController {
         }
       } else {
         // Create new draft application
-        application = new Application({ ...applicationData, status: "DRAFT" });
+        application = new Application({ ...applicationData, status: "DRAFT", userId: req.user?.id });
         await application.save({ validateBeforeSave: false }); // Disable validation for drafts
       }
 
@@ -115,7 +115,7 @@ export class ApplicationController {
         }
       } else {
         // Create and submit new application
-        application = new Application({ ...applicationData, status: "SUBMITTED" });
+        application = new Application({ ...applicationData, status: "SUBMITTED", userId: req.user?.id });
         await application.save({ validateBeforeSave: true }); // Enable validation for submission
       }
 
@@ -302,7 +302,7 @@ export class ApplicationController {
     try {
       const { status, contractId, fromDate, toDate, search } = req.query;
 
-      const filter: any = {};
+      const filter: any = { userId: req.user?.id };
 
       if (status && typeof status === "string") {
         filter.status = { $in: status.split(",") };

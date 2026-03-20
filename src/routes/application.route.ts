@@ -1,7 +1,10 @@
 import express from 'express';
 import { ApplicationController } from '../controllers/application.controller';
+import { authenticateUser } from '../middleware/auth.middleware';
 
 const router = express.Router();
+
+router.use(authenticateUser);
 
 // Create a new application
 router.post('/', ApplicationController.createApplication);
