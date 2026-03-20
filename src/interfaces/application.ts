@@ -1,15 +1,15 @@
 // Application interface
+import { Types } from "mongoose";
+
 export interface IApplication {
     id?: string;
-    contractId?: string;
+    contractId?: Types.ObjectId;
     status?: "DRAFT" | "SUBMITTED" | "REVIWING" | "APPROVED" | "REJECTED";
     createdAt?: Date;
     updatedAt?: Date;
-  
     sectionA: ISectionA;
     sectionB: ISectionB;
     sectionC: ISectionC;
-  
     notes?: string;
     attachments?: string[];
   }
