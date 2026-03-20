@@ -2,6 +2,7 @@ import { AuthRouter } from "./auth.route";
 import { MediaRouter } from "./media.route";
 import { AdminRouter } from "./admin.route";
 import { ContractRouter } from "./contract.route";
+import applicationRouter from "./application.route";
 import { Request, Response, Router } from "express";
 import { createResponse } from "../helpers/response";
 
@@ -24,5 +25,7 @@ router.use("/contracts", ContractRouter);
 router.use("/media", MediaRouter);
 
 router.use("/admin", AdminRouter);
+
+router.use("/applications", applicationRouter);
 
 export { router as rootRouter };

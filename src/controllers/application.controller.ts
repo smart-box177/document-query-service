@@ -16,14 +16,6 @@ export class ApplicationController {
     try {
       const applicationData = req.body;
 
-      // Validate required fields
-      if (!applicationData.sectionA || !applicationData.sectionB || !applicationData.sectionC) {
-        throw new APIError({
-          message: "All sections (A, B, C) are required",
-          status: 400,
-        });
-      }
-
       const application = new Application(applicationData);
       await application.save();
 
@@ -33,6 +25,106 @@ export class ApplicationController {
           status: 201,
           success: true,
           message: "Application created successfully",
+          data: application,
+        }));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Save application as draft
+   */
+  static async saveAsDraft(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const { id } = req.params;
+      const applicationData = req.body;
+
+      let application;
+
+      if (id && Types.ObjectId.isValid(id)) {
+        // Update existing application
+        application = await Application.findByIdAndUpdate(
+          id,
+          { ...applicationData, status: "DRAFT" },
+          { new: true, runValidators: false } // Disable validation for drafts
+        );
+        if (!application) {
+          throw new APIError({
+            message: "Application not found",
+            status: 404,
+          });
+        }
+      } else {
+        // Create new draft application
+        application = new Application({ ...applicationData, status: "DRAFT" });
+        await application.save({ validateBeforeSave: false }); // Disable validation for drafts
+      }
+
+      res
+        .status(200)
+        .json(createResponse({
+          status: 200,
+          success: true,
+          message: "Application saved as draft successfully",
+          data: application,
+        }));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Save and submit application
+   */
+  static async saveAndSubmit(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const { id } = req.params;
+      const applicationData = req.body;
+
+      // Validate all required fields are present when submitting
+      if (!applicationData.sectionA || !applicationData.sectionB || !applicationData.sectionC) {
+        throw new APIError({
+          message: "All sections (A, B, C) are required to submit the application",
+          status: 400,
+        });
+      }
+
+      let application;
+
+      if (id && Types.ObjectId.isValid(id)) {
+        // Update and submit existing application
+        application = await Application.findByIdAndUpdate(
+          id,
+          { ...applicationData, status: "SUBMITTED" },
+          { new: true, runValidators: true } // Enable validation for submission
+        );
+        if (!application) {
+          throw new APIError({
+            message: "Application not found",
+            status: 404,
+          });
+        }
+      } else {
+        // Create and submit new application
+        application = new Application({ ...applicationData, status: "SUBMITTED" });
+        await application.save({ validateBeforeSave: true }); // Enable validation for submission
+      }
+
+      res
+        .status(200)
+        .json(createResponse({
+          status: 200,
+          success: true,
+          message: "Application submitted successfully",
           data: application,
         }));
     } catch (error) {

@@ -7,9 +7,9 @@ export interface IApplication {
     status?: "DRAFT" | "SUBMITTED" | "REVIWING" | "APPROVED" | "REJECTED";
     createdAt?: Date;
     updatedAt?: Date;
-    sectionA: ISectionA;
-    sectionB: ISectionB;
-    sectionC: ISectionC;
+    sectionA?: ISectionA;
+    sectionB?: ISectionB;
+    sectionC?: ISectionC;
     notes?: string;
     attachments?: string[];
   }
