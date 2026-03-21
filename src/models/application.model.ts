@@ -220,6 +220,29 @@ const sectionASchema = new Schema(
   { _id: false }
 );
 
+// Pre-save hook to generate reference number
+sectionASchema.pre('save', function(next) {
+  // Generate reference number if not already set and operator name is provided
+  if (!this.referenceNumber && this.operatorName) {
+    // Clean operator name: remove special characters, replace spaces with hyphens, convert to uppercase
+    const cleanOperatorName = this.operatorName
+      .trim()
+      .replace(/[^a-zA-Z0-9\s]/g, '')
+      .replace(/\s+/g, '-')
+      .toUpperCase();
+    
+    // Get current date in YYYYMMDD format
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const dateStr = `${year}${month}${day}`;
+    
+    this.referenceNumber = `NCCC/${cleanOperatorName}/${dateStr}`;
+  }
+  // next();
+});
+
 // Main application schema
 const applicationSchema = new Schema<IApplication>(
   {
