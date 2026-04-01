@@ -33,3 +33,6 @@ export const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || "";
 export const BROWSERLESS_TOKEN = process.env.BROWSERLESS_TOKEN;
 
 export const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+export const REMOVE_BG_API_KEY = process.env.REMOVE_BG_API_KEY || "";
+export const REMOVE_BG_KEY_LABEL = process.env.REMOVE_BG_KEY_LABEL || "";

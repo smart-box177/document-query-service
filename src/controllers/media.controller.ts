@@ -3,6 +3,7 @@ import { createResponse } from "../helpers/response";
 import APIError from "../helpers/api.error";
 import HttpStatus from "http-status";
 import { Media } from "../models/media.model";
+import { User } from "../models/user.model";
 import { v2 as cloudinary } from "cloudinary";
 import { Contract } from "../models/contract.model";
 import axios from "axios";
@@ -263,6 +264,50 @@ export class MediaController {
       }
 
       await archive.finalize();
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public static async uploadSignature(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      if (!req.user) {
+        throw new APIError({ message: "Not authenticated", status: 401 });
+      }
+
+      if (!req.file) {
+        throw new APIError({
+          message: "No signature file uploaded",
+          status: HttpStatus.BAD_REQUEST,
+        });
+      }
+
+      const file = req.file as CloudinaryFile;
+
+      // Update user signature
+      const user = await User.findByIdAndUpdate(
+        req.user.id,
+        { signature: file.path },
+        { new: true }
+      ).select("-password").orFail(() => {
+        throw new APIError({ message: "User not found", status: 404 });
+      });
+
+      res.status(200).json(
+        createResponse({
+          status: 200,
+          success: true,
+          message: "Signature uploaded successfully",
+          data: {
+            signatureUrl: file.path,
+            user,
+          },
+        })
+      );
     } catch (error) {
       next(error);
     }
