@@ -1,7 +1,6 @@
 import { AuthRouter } from "./auth.route";
 import { MediaRouter } from "./media.route";
 import { AdminRouter } from "./admin.route";
-import { ContractRouter } from "./contract.route";
 import applicationRouter from "./application.route";
 import { UserRouter } from "./user.routes";
 import { Request, Response, Router } from "express";
@@ -20,8 +19,6 @@ router.get("/health-check", (_req: Request, res: Response) => {
 });
 
 router.use("/auth", AuthRouter);
-
-router.use("/contracts", ContractRouter);
 
 router.use("/media", MediaRouter);
 

@@ -3,7 +3,6 @@ import { Types } from "mongoose";
 
 export interface IApplication {
     id?: string;
-    contractId?: Types.ObjectId;
     userId?: Types.ObjectId;
     status?: "DRAFT" | "SUBMITTED" | "REVIEWING" | "APPROVED" | "REJECTED" | "REVISION_REQUESTED";
     createdAt?: Date;
@@ -14,6 +13,24 @@ export interface IApplication {
     notes?: string;
     adminComments?: string;
     attachments?: string[];
+
+    // Contract/document fields
+    operator?: string;
+    contractorName?: string;
+    contractTitle?: string;
+    year?: number;
+    contractNumber?: string;
+    startDate?: Date;
+    endDate?: Date;
+    contractValue?: string;
+    documentURLS?: string[];
+    hasMedia?: boolean;
+    mediaType?: "pdf" | "image" | "mixed" | "other" | null;
+
+    // Admin archive fields
+    isArchived?: boolean;
+    archivedAt?: Date;
+    archivedBy?: Types.ObjectId;
   }
   
   // enums/currency.ts

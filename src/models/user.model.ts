@@ -10,9 +10,9 @@ import {
 
 const bookmarkSchema = new Schema(
   {
-    contractId: {
+    applicationId: {
       type: Schema.Types.ObjectId,
-      ref: "contract",
+      ref: "application",
       required: true,
     },
     bookmarkedAt: {
@@ -23,11 +23,11 @@ const bookmarkSchema = new Schema(
   { _id: false }
 );
 
-const archivedContractSchema = new Schema(
+const archivedApplicationSchema = new Schema(
   {
-    contractId: {
+    applicationId: {
       type: Schema.Types.ObjectId,
-      ref: "contract",
+      ref: "application",
       required: true,
     },
     archivedAt: {
@@ -91,8 +91,8 @@ const userSchema = new Schema<IUserDocument, Model<IUserDocument>, IUser>(
       type: [bookmarkSchema],
       default: [],
     },
-    archivedContracts: {
-      type: [archivedContractSchema],
+    archivedApplications: {
+      type: [archivedApplicationSchema],
       default: [],
     },
   },

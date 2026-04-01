@@ -9,7 +9,7 @@ const mediaSchema = new Schema(
     size: { type: Number, required: true },
     publicId: { type: String, required: true },
     uploadedBy: { type: Schema.Types.ObjectId, ref: "user" },
-    contractId: { type: Schema.Types.ObjectId, ref: "contract" },
+    applicationId: { type: Schema.Types.ObjectId, ref: "application" },
     tags: [{ type: String }],
     isDeleted: { type: Boolean, default: false },
     deletedAt: { type: Date },
@@ -20,7 +20,7 @@ const mediaSchema = new Schema(
 mediaSchema.index({ originalName: "text", filename: "text" });
 mediaSchema.index({ isDeleted: 1 });
 mediaSchema.index({ uploadedBy: 1 });
-mediaSchema.index({ contractId: 1 });
+mediaSchema.index({ applicationId: 1 });
 mediaSchema.index({ tags: 1 });
 
 export const Media = model("media", mediaSchema);

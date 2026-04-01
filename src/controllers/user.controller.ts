@@ -12,7 +12,7 @@ export class UserController {
   static async getAllUsers(req: Request, res: Response, next: NextFunction) {
     try {
       const users = await User.find()
-        .select("-password -bookmarks -archivedContracts")
+        .select("-password -bookmarks -archivedApplications")
         .sort({ createdAt: -1 });
 
       res.status(200).json(
@@ -78,7 +78,7 @@ export class UserController {
         { role },
         { new: true }
       )
-        .select("-password -bookmarks -archivedContracts")
+        .select("-password -bookmarks -archivedApplications")
         .orFail(() => {
           throw new APIError({ message: "User not found", status: 404 });
         });

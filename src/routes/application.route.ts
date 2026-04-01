@@ -1,39 +1,48 @@
 import express from 'express';
 import { ApplicationController } from '../controllers/application.controller';
 import { authenticateUser } from '../middleware/auth.middleware';
+import { requireAdmin } from '../middleware/admin.middleware';
 
 const router = express.Router();
 
 router.use(authenticateUser);
 
-// Create a new application
+// Application CRUD
 router.post('/', ApplicationController.createApplication);
-
-// Save application as draft (create or update)
 router.post('/draft', ApplicationController.saveAsDraft);
 router.put('/:id/draft', ApplicationController.saveAsDraft);
-
-// Save and submit application (create or update)
 router.post('/submit', ApplicationController.saveAndSubmit);
 router.put('/:id/submit', ApplicationController.saveAndSubmit);
-
-// Get all applications with filters
 router.get('/', ApplicationController.getApplications);
-
-// Get a single application by ID
+router.get('/search', ApplicationController.search);
+router.put('/:id/review', requireAdmin, ApplicationController.reviewApplication);
+router.put('/:id', ApplicationController.updateApplication);
+router.delete('/:id', ApplicationController.deleteApplication);
 router.get('/:id', ApplicationController.getApplicationById);
 
-// Update an application
-router.put('/:id', ApplicationController.updateApplication);
+// Search history
+router.get('/search/history', ApplicationController.getSearchHistory);
+router.delete('/search/history', ApplicationController.clearSearchHistory);
+router.delete('/search/history/:historyId', ApplicationController.deleteSearchHistory);
 
-// Review an application (admin actions: approve, reject, request revision)
-import { requireAdmin } from '../middleware/admin.middleware';
-router.put('/:id/review', requireAdmin, ApplicationController.reviewApplication);
+// Bookmarks
+router.get('/bookmarks', ApplicationController.getBookmarks);
+router.delete('/bookmarks', ApplicationController.clearBookmarks);
+router.post('/bookmarks/:applicationId', ApplicationController.addBookmark);
+router.delete('/bookmarks/:applicationId', ApplicationController.removeBookmark);
 
-// Delete an application
-router.delete('/:id', ApplicationController.deleteApplication);
+// User archive
+router.get('/archive/user', ApplicationController.getUserArchive);
+router.delete('/archive/user', ApplicationController.clearUserArchive);
+router.post('/archive/user/:applicationId', ApplicationController.archiveForUser);
+router.delete('/archive/user/:applicationId', ApplicationController.restoreForUser);
 
-// Get applications by contract ID
-router.get('/contract/:contractId', ApplicationController.getApplicationsByContractId);
+// Global archive (admin only)
+router.get('/archive/global', requireAdmin, ApplicationController.getGlobalArchive);
+router.delete('/archive/global', requireAdmin, ApplicationController.emptyGlobalArchive);
+router.post('/archive/global/:applicationId', requireAdmin, ApplicationController.archiveGlobally);
+router.delete('/archive/global/:applicationId', requireAdmin, ApplicationController.restoreGlobally);
+router.delete('/archive/global/:applicationId/permanent', requireAdmin, ApplicationController.permanentlyDelete);
 
 export default router;
+

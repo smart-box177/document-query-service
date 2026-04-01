@@ -1,5 +1,5 @@
 import { Socket } from "socket.io";
-import { Contract } from "../models/contract.model";
+import { Application } from "../models/application.model";
 import { Media } from "../models/media.model";
 import { SearchHistory } from "../models/history.model";
 import { readPdfFromUrl } from "./pdf-reader";
@@ -170,82 +170,81 @@ export async function searchContractsWithSummary(
             { contractorName: { $regex: cleanQuery, $options: "i" } },
             { operator: { $regex: cleanQuery, $options: "i" } },
             { contractNumber: { $regex: cleanQuery, $options: "i" } },
+            { "sectionA.contractProjectTitle": { $regex: cleanQuery, $options: "i" } },
+            { "sectionA.mainContractor": { $regex: cleanQuery, $options: "i" } },
+            { "sectionA.operatorOrProjectPromoter": { $regex: cleanQuery, $options: "i" } },
           ],
         }
       : {};
 
-    const contracts = await Contract.find({
+    const applications = await Application.find({
       ...dateFilter,
       ...textSearchConditions,
     }).limit(20);
 
     socket.emit("contract:search:progress", {
-      message: `Found ${contracts.length} contracts`,
-      count: contracts.length,
+      message: `Found ${applications.length} applications`,
+      count: applications.length,
     });
 
-    if (contracts.length === 0) {
+    if (applications.length === 0) {
       socket.emit("contract:search:complete", {
-        message: "No contracts found",
+        message: "No applications found",
         total: 0,
       });
       return;
     }
 
-    // Filter out archived contracts
-    const filteredContracts = contracts.filter(
-      (c) => !archivedContractIds.includes(c._id.toString())
+    // Filter out archived applications
+    const filteredApplications = applications.filter(
+      (a) => !archivedContractIds.includes(a._id.toString())
     );
 
-    const contractIds = filteredContracts.map((c) => c._id);
+    const applicationIds = filteredApplications.map((a) => a._id);
     const media = await Media.find({
-      contractId: { $in: contractIds },
+      applicationId: { $in: applicationIds },
       isDeleted: false,
-    }).select("url filename originalName mimetype size contractId");
+    }).select("url filename originalName mimetype size applicationId");
 
-    const contractsWithMedia = filteredContracts.map((contract) => {
-      const contractMedia = media.filter(
-        (m) => m.contractId?.toString() === contract._id.toString()
+    const applicationsWithMedia = filteredApplications.map((application) => {
+      const appMedia = media.filter(
+        (m) => m.applicationId?.toString() === application._id.toString()
       );
       return {
-        ...contract.toObject(),
-        media: contractMedia,
-        // Add zip download URL for contracts with multiple files
+        ...application.toObject(),
+        media: appMedia,
         zipUrl:
-          contractMedia.length > 1
-            ? `/api/media/zip/${contract._id.toString()}`
+          appMedia.length > 1
+            ? `/api/media/zip/${application._id.toString()}`
             : null,
       };
     });
 
-    // Stream each contract with document summary
-    for (const contract of contractsWithMedia) {
+    // Stream each application with document summary
+    for (const application of applicationsWithMedia) {
       let documentSummary: string | null = null;
 
-      // If contract has PDF documents and AI is available, extract and summarize
-      if (aiAvailable && contract.media && contract.media.length > 0) {
-        const pdfMedia = contract.media.find(
+      // If application has PDF documents and AI is available, extract and summarize
+      if (aiAvailable && application.media && application.media.length > 0) {
+        const pdfMedia = application.media.find(
           (m) => m.mimetype === "application/pdf" || m.url?.endsWith(".pdf")
         );
 
         if (pdfMedia) {
           try {
             socket.emit("contract:search:progress", {
-              message: `Reading document for ${contract.contractTitle}...`,
+              message: `Reading document for ${application.contractTitle || application.sectionA?.contractProjectTitle}...`,
             });
 
-            console.log(`Attempting to read PDF from: ${pdfMedia.url}`);
             const pdfText = await readPdfFromUrl(pdfMedia.url, 500);
 
             if (pdfText && pdfText.length > 50) {
               socket.emit("contract:search:progress", {
-                message: `Generating summary for ${contract.contractTitle}...`,
+                message: `Generating summary for ${application.contractTitle || application.sectionA?.contractProjectTitle}...`,
               });
 
               const summaryPrompt = `Summarize this contract document in 2-3 sentences. Focus on key terms, parties involved, and main obligations:\n\n${pdfText}`;
-
               const response = await search(summaryPrompt);
-
               documentSummary = response.text || null;
             }
           } catch (err) {
@@ -253,13 +252,12 @@ export async function searchContractsWithSummary(
               console.warn("AI rate limit reached, skipping AI summaries");
               aiAvailable = false;
             } else if (isPdfAccessError(err)) {
-              // PDF not accessible, skip silently
               console.warn(
-                `PDF not accessible for contract ${contract._id}, skipping summary`
+                `PDF not accessible for application ${application._id}, skipping summary`
               );
             } else {
               console.error(
-                `Failed to summarize document for contract ${contract._id}:`,
+                `Failed to summarize document for application ${application._id}:`,
                 err
               );
             }
@@ -269,7 +267,7 @@ export async function searchContractsWithSummary(
 
       socket.emit("contract:search:result", {
         contract: {
-          ...contract,
+          ...application,
           documentSummary,
         },
       });
@@ -281,14 +279,14 @@ export async function searchContractsWithSummary(
         message: "Generating search summary...",
       });
 
-      const contractSummaries = contractsWithMedia
+      const applicationSummaries = applicationsWithMedia
         .map(
-          (c) =>
-            `- ${c.contractTitle} (${c.operator}, ${c.contractorName}, ${c.year})`
+          (a) =>
+            `- ${a.contractTitle || a.sectionA?.contractProjectTitle} (${a.operator || a.sectionA?.operatorOrProjectPromoter}, ${a.contractorName || a.sectionA?.mainContractor}, ${a.year})`
         )
         .join("\n");
 
-      const overallPrompt = `Based on the search query "${query}", provide a brief 2-3 sentence summary of these contract search results:\n\n${contractSummaries}`;
+      const overallPrompt = `Based on the search query "${query}", provide a brief 2-3 sentence summary of these application search results:\n\n${applicationSummaries}`;
 
       try {
         const overallResponse = await AI.models.generateContent({
@@ -303,26 +301,26 @@ export async function searchContractsWithSummary(
         if (isRateLimitError(err)) {
           console.warn("AI rate limit reached, skipping overall summary");
           socket.emit("contract:search:summary", {
-            summary: `Found ${contractsWithMedia.length} contracts matching "${query}"`,
+            summary: `Found ${applicationsWithMedia.length} applications matching "${query}"`,
           });
         } else {
           console.error("Failed to generate overall summary:", err);
           socket.emit("contract:search:summary", {
-            summary: `Found ${contractsWithMedia.length} contracts matching "${query}"`,
+            summary: `Found ${applicationsWithMedia.length} applications matching "${query}"`,
           });
         }
       }
     } else {
       socket.emit("contract:search:summary", {
-        summary: `Found ${contractsWithMedia.length} contracts matching "${query}" (AI summaries unavailable due to rate limits)`,
+        summary: `Found ${applicationsWithMedia.length} applications matching "${query}" (AI summaries unavailable due to rate limits)`,
       });
     }
 
-    resultsCount = contractsWithMedia.length;
+    resultsCount = applicationsWithMedia.length;
 
     socket.emit("contract:search:complete", {
       message: "Search completed",
-      total: contractsWithMedia.length,
+      total: applicationsWithMedia.length,
     });
 
     // Save search history if user is authenticated

@@ -11,12 +11,12 @@ export enum UserRole {
 }
 
 export interface IBookmark {
-  contractId: Types.ObjectId;
+  applicationId: Types.ObjectId;
   bookmarkedAt: Date;
 }
 
-export interface IArchivedContract {
-  contractId: Types.ObjectId;
+export interface IArchivedApplication {
+  applicationId: Types.ObjectId;
   archivedAt: Date;
 }
 
@@ -35,7 +35,7 @@ export interface IUser {
   bookmarks?: IBookmark[];
   isEmailVerified?: boolean;
   authProvider?: AuthProvider;
-  archivedContracts?: IArchivedContract[];
+  archivedApplications?: IArchivedApplication[];
 }
 
 export interface IUserDocument extends IUser, Document {

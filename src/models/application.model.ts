@@ -223,7 +223,6 @@ const sectionASchema = new Schema(
 // Main application schema
 const applicationSchema = new Schema<IApplication>(
   {
-    contractId: { type: Schema.Types.ObjectId, ref: "contract" },
     userId: { type: Schema.Types.ObjectId, ref: "user" },
     status: {
       type: String,
@@ -236,6 +235,24 @@ const applicationSchema = new Schema<IApplication>(
     notes: { type: String },
     adminComments: { type: String },
     attachments: { type: [String], default: [] },
+
+    // Contract/document fields (migrated from Contract model)
+    operator: { type: String, index: true },
+    contractorName: { type: String, index: true },
+    contractTitle: { type: String },
+    year: { type: Number, index: true },
+    contractNumber: { type: String, unique: true, sparse: true },
+    startDate: { type: Date },
+    endDate: { type: Date },
+    contractValue: { type: String },
+    documentURLS: [{ type: String }],
+    hasMedia: { type: Boolean, default: false },
+    mediaType: { type: String, enum: ["pdf", "image", "mixed", "other", null], default: null },
+
+    // Admin-level archive fields
+    isArchived: { type: Boolean, default: false, index: true },
+    archivedAt: { type: Date },
+    archivedBy: { type: Schema.Types.ObjectId, ref: "user" },
   },
   { timestamps: true }
 );
@@ -263,7 +280,9 @@ applicationSchema.pre('save', async function() {
 });
 
 // Indexes for common queries
-applicationSchema.index({ contractId: 1 });
+applicationSchema.index({ contractorName: 1, year: 1 });
+applicationSchema.index({ operator: 1 });
+applicationSchema.index({ hasMedia: 1 });
 applicationSchema.index({ status: 1 });
 applicationSchema.index({ createdAt: -1 });
 

@@ -5,7 +5,7 @@ import HttpStatus from "http-status";
 import { Media } from "../models/media.model";
 import { User } from "../models/user.model";
 import { v2 as cloudinary } from "cloudinary";
-import { Contract } from "../models/contract.model";
+import { Application } from "../models/application.model";
 import axios from "axios";
 import archiver from "archiver";
 
@@ -42,9 +42,8 @@ export class MediaController {
       }
 
       const file = req.file as CloudinaryFile;
-      const { uploadedBy, contractId, tags } = req.body;
+      const { uploadedBy, applicationId, tags } = req.body;
       console.log("file path " + file.path);
-      // const url = appendExtensionToUrl(file.path, file.originalname);
 
       const media = await Media.create({
         url: file.path,
@@ -54,8 +53,7 @@ export class MediaController {
         size: file.size,
         publicId: file.filename,
         uploadedBy,
-        contractId,
-        tags: tags ? JSON.parse(tags) : [],
+        applicationId,
       });
 
       res.status(201).json(
@@ -85,7 +83,7 @@ export class MediaController {
       }
 
       const files = req.files as CloudinaryFile[];
-      const { uploadedBy, contractId, tags } = req.body;
+      const { uploadedBy, applicationId, tags } = req.body;
       const parsedTags = tags ? JSON.parse(tags) : [];
 
       const mediaData = files.map((file) => ({
@@ -96,7 +94,7 @@ export class MediaController {
         size: file.size,
         publicId: file.filename,
         uploadedBy,
-        contractId,
+        applicationId,
         tags: parsedTags,
       }));
 
@@ -117,16 +115,16 @@ export class MediaController {
 
   public static async getAll(req: Request, res: Response, next: NextFunction) {
     try {
-      const { page = 1, limit = 10, contractId, uploadedBy, tags } = req.query;
+      const { page = 1, limit = 10, applicationId, uploadedBy, tags } = req.query;
       const query: Record<string, unknown> = { isDeleted: false };
 
-      if (contractId) query.contractId = contractId;
+      if (applicationId) query.applicationId = applicationId;
       if (uploadedBy) query.uploadedBy = uploadedBy;
       if (tags) query.tags = { $in: String(tags).split(",") };
 
       const media = await Media.find(query)
         .populate("uploadedBy", "username email")
-        .populate("contractId", "contractTitle contractNumber")
+        .populate("applicationId", "sectionA.contractProjectTitle sectionA.contractProjectNumber")
         .skip((Number(page) - 1) * Number(limit))
         .limit(Number(limit))
         .sort({ createdAt: -1 });
@@ -151,7 +149,7 @@ export class MediaController {
       const { id } = req.params;
       const media = await Media.findOne({ _id: id, isDeleted: false })
         .populate("uploadedBy", "username email")
-        .populate("contractId", "contractTitle contractNumber")
+        .populate("applicationId", "sectionA.contractProjectTitle sectionA.contractProjectNumber")
         .orFail(() => {
           throw new APIError({ message: "Media not found", status: 404 });
         });
@@ -204,30 +202,30 @@ export class MediaController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const { contractId } = req.params;
+      const { contractId: applicationId } = req.params;
 
-      const contract = await Contract.findById(contractId);
-      if (!contract) {
+      const application = await Application.findById(applicationId);
+      if (!application) {
         throw new APIError({
-          message: "Contract not found",
+          message: "Application not found",
           status: HttpStatus.NOT_FOUND,
         });
       }
 
       const mediaFiles = await Media.find({
-        contractId,
+        applicationId,
         isDeleted: false,
       });
 
       if (mediaFiles.length === 0) {
         throw new APIError({
-          message: "No files found for this contract",
+          message: "No files found for this application",
           status: HttpStatus.NOT_FOUND,
         });
       }
 
-      // Generate safe filename from contract title
-      const safeTitle = (contract.contractTitle || "contract")
+      // Generate safe filename from application title
+      const safeTitle = (application.contractTitle || application.sectionA?.contractProjectTitle || "application")
         .replace(/[^a-zA-Z0-9]/g, "_")
         .substring(0, 50);
       const zipFilename = `${safeTitle}_documents.zip`;
