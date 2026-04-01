@@ -22,6 +22,7 @@ declare global {
         username: string;
         role: string;
         avatar?: string;
+        signature?: string;
       };
     }
   }
@@ -101,6 +102,7 @@ export const authenticateUser = async (
       username: user.username,
       role: user.role || "user",
       avatar: user.avatar,
+      signature: user.signature,
     };
 
     next();

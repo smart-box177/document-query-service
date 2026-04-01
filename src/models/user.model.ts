@@ -70,6 +70,9 @@ const userSchema = new Schema<IUserDocument, Model<IUserDocument>, IUser>(
     avatar: {
       type: String,
     },
+    signature: {
+      type: String,
+    },
      authProvider: {
       type: String,
       enum: Object.values(AuthProvider),

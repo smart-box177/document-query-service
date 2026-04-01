@@ -25,6 +25,7 @@ export interface IUser {
   email: string;
   role?: UserRole;
   avatar?: string;
+  signature?: string;
   username: string;
   lastLogin?: Date;
   lastname?: string;

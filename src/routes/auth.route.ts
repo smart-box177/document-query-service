@@ -22,4 +22,7 @@ router.use(authenticateUser);
 
 router.route("/me").get(AuthController.me);
 
+import { UserController } from "../controllers/user.controller";
+router.route("/profile").put(UserController.updateProfile);
+
 export { router as AuthRouter };

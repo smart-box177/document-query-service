@@ -157,4 +157,44 @@ export class UserController {
       next(error);
     }
   }
+
+  /**
+   * Update current user's profile
+   */
+  static async updateProfile(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.user) {
+        throw new APIError({ message: "Not authenticated", status: 401 });
+      }
+
+      const { username, email, signature, avatar } = req.body;
+      const updateData: any = {};
+      
+      if (username !== undefined) updateData.username = username;
+      if (email !== undefined) updateData.email = email;
+      if (signature !== undefined) updateData.signature = signature;
+      if (avatar !== undefined) updateData.avatar = avatar;
+
+      const user = await User.findByIdAndUpdate(
+        req.user.id,
+        { $set: updateData },
+        { new: true }
+      )
+        .select("-password")
+        .orFail(() => {
+          throw new APIError({ message: "User not found", status: 404 });
+        });
+
+      res.status(200).json(
+        createResponse({
+          status: 200,
+          success: true,
+          message: "Profile updated successfully",
+          data: user,
+        })
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
 }
