@@ -2,6 +2,8 @@ import { NextFunction, Request, Response } from "express";
 import { createResponse } from "../helpers/response";
 import { User } from "../models/user.model";
 import APIError from "../helpers/api.error";
+import { removeBackgroundFromImageUrl } from "remove.bg";
+import { REMOVE_BG_API_KEY } from "../constant";
 
 export class UserController {
   /**
@@ -195,6 +197,52 @@ export class UserController {
       );
     } catch (error) {
       next(error);
+    }
+  }
+
+  /**
+   * Remove background from signature image
+   */
+  static async removeSignatureBackground(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.user) {
+        throw new APIError({ message: "Not authenticated", status: 401 });
+      }
+
+      const { imageUrl } = req.body;
+
+      if (!imageUrl) {
+        throw new APIError({ message: "Image URL is required", status: 400 });
+      }
+
+      if (!REMOVE_BG_API_KEY) {
+        throw new APIError({ message: "Background removal API key not configured", status: 500 });
+      }
+
+      const result = await removeBackgroundFromImageUrl({
+        url: imageUrl,
+        apiKey: REMOVE_BG_API_KEY,
+        size: "regular",
+        type: "auto",
+        format: "png",
+      });
+
+      // result.base64img contains the processed image as base64 string
+      const base64Image = `data:image/png;base64,${result.base64img}`;
+
+      res.status(200).json(
+        createResponse({
+          status: 200,
+          success: true,
+          message: "Background removed successfully",
+          data: {
+            processedImage: base64Image,
+          },
+        })
+      );
+    } catch (error) {
+      console.error("Remove BG error:", error);
+      next(new APIError({ message: "Failed to remove background from image", status: 500 }));
     }
   }
 }

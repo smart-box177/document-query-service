@@ -10,6 +10,8 @@ router.use(authenticateUser);
 
 router.route("/profile").put(UserController.updateProfile);
 
+router.route("/signature/remove-bg").post(UserController.removeSignatureBackground);
+
 router.route("/signature").post(uploadMiddleware.single("file"), MediaController.uploadSignature);
 
 export { router as UserRouter };
