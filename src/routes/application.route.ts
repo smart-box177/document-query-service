@@ -26,6 +26,10 @@ router.get('/:id', ApplicationController.getApplicationById);
 // Update an application
 router.put('/:id', ApplicationController.updateApplication);
 
+// Review an application (admin actions: approve, reject, request revision)
+import { requireAdmin } from '../middleware/admin.middleware';
+router.put('/:id/review', requireAdmin, ApplicationController.reviewApplication);
+
 // Delete an application
 router.delete('/:id', ApplicationController.deleteApplication);
 

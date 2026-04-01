@@ -5,13 +5,14 @@ export interface IApplication {
     id?: string;
     contractId?: Types.ObjectId;
     userId?: Types.ObjectId;
-    status?: "DRAFT" | "SUBMITTED" | "REVIWING" | "APPROVED" | "REJECTED";
+    status?: "DRAFT" | "SUBMITTED" | "REVIEWING" | "APPROVED" | "REJECTED" | "REVISION_REQUESTED";
     createdAt?: Date;
     updatedAt?: Date;
     sectionA?: ISectionA;
     sectionB?: ISectionB;
     sectionC?: ISectionC;
     notes?: string;
+    adminComments?: string;
     attachments?: string[];
   }
   

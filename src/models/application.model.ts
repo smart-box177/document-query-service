@@ -227,13 +227,14 @@ const applicationSchema = new Schema<IApplication>(
     userId: { type: Schema.Types.ObjectId, ref: "user" },
     status: {
       type: String,
-      enum: ["DRAFT", "SUBMITTED", "REVIWING", "APPROVED", "REJECTED"],
+      enum: ["DRAFT", "SUBMITTED", "REVIEWING", "APPROVED", "REJECTED", "REVISION_REQUESTED"],
       default: "DRAFT",
     },
     sectionA: { type: sectionASchema, required: false },
     sectionB: { type: sectionBSchema, required: false },
     sectionC: { type: sectionCSchema, required: false },
     notes: { type: String },
+    adminComments: { type: String },
     attachments: { type: [String], default: [] },
   },
   { timestamps: true }

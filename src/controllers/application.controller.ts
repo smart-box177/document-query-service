@@ -253,6 +253,57 @@ export class ApplicationController {
   }
 
   /**
+   * Review application (Approve, Reject, Request Revision)
+   */
+  static async reviewApplication(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const { status, adminComments } = req.body;
+
+      if (!Types.ObjectId.isValid(id)) {
+        throw new APIError({
+          message: "Invalid application ID",
+          status: 400,
+        });
+      }
+
+      if (!["APPROVED", "REJECTED", "REVISION_REQUESTED"].includes(status)) {
+        throw new APIError({
+          message: "Invalid status update",
+          status: 400,
+        });
+      }
+
+      const application = await Application.findByIdAndUpdate(
+        id,
+        { 
+          status, 
+          adminComments 
+        },
+        { new: true, runValidators: true }
+      ).populate("userId", "username email");
+
+      if (!application) {
+        throw new APIError({
+          message: "Application not found",
+          status: 404,
+        });
+      }
+
+      res
+        .status(200)
+        .json(createResponse({
+          status: 200,
+          success: true,
+          message: `Application ${status.toLowerCase().replace('_', ' ')} successfully`,
+          data: application,
+        }));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Delete an application
    */
   static async deleteApplication(
