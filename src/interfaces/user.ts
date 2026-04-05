@@ -9,6 +9,7 @@ export enum UserRole {
   ADMIN = "admin",
   PCAD = "PCAD",
   USER = "user",
+  MD = "MD",
 }
 
 export interface IBookmark {

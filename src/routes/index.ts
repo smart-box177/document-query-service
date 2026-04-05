@@ -26,6 +26,9 @@ router.use("/admin", AdminRouter);
 
 router.use("/users", UserRouter);
 
+import { ComplianceRouter } from "./compliance.route";
+
 router.use("/applications", applicationRouter);
+router.use("/compliance", ComplianceRouter);
 
 export { router as rootRouter };
