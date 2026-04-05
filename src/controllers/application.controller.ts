@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { Types } from "mongoose";
+import ExcelJS from "exceljs";
 import { createResponse } from "../helpers/response";
 import { Application } from "../models/application.model";
 import { Media } from "../models/media.model";
@@ -1251,6 +1252,338 @@ export class ApplicationController {
           data: { deletedCount: applicationIds.length },
         })
       );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ==================== EXPORT ====================
+
+  public static async exportToExcel(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const { id } = req.params;
+      const { sendToEmail } = req.body as { sendToEmail?: boolean };
+
+      if (!Types.ObjectId.isValid(id)) {
+        throw new APIError({ message: "Invalid application ID", status: 400 });
+      }
+
+      const application = await Application.findById(id).lean();
+      if (!application) {
+        throw new APIError({ message: "Application not found", status: 404 });
+      }
+
+      // Ownership check — only the applicant or an admin/PCAD may export
+      const role = req.user?.role;
+      const isAdmin = role === "admin" || role === "PCAD";
+      if (!isAdmin && application.userId?.toString() !== req.user?.id) {
+        throw new APIError({ message: "Forbidden", status: 403 });
+      }
+
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = "NCCC Portal";
+      workbook.created = new Date();
+
+      // ── Header style helpers ────────────────────────────────────────
+      const headerFill: ExcelJS.Fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF1A3C5E" },
+      };
+      const headerFont: Partial<ExcelJS.Font> = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
+      const subHeaderFill: ExcelJS.Fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFD9E1F2" },
+      };
+      const subHeaderFont: Partial<ExcelJS.Font> = { bold: true, size: 10 };
+
+      const styleHeader = (row: ExcelJS.Row) => {
+        row.font = headerFont;
+        row.fill = headerFill;
+        row.alignment = { vertical: "middle", horizontal: "center" };
+        row.height = 20;
+      };
+
+      const styleSubHeader = (row: ExcelJS.Row) => {
+        row.font = subHeaderFont;
+        row.fill = subHeaderFill;
+        row.alignment = { vertical: "middle" };
+        row.height = 18;
+      };
+
+      const sA = application.sectionA as Record<string, unknown> | undefined;
+      const sB = application.sectionB as Record<string, unknown> | undefined;
+      const sC = application.sectionC as Record<string, unknown> | undefined;
+
+      // ── Sheet 1: Summary (Section A) ────────────────────────────────
+      const sheetA = workbook.addWorksheet("Section A – Summary");
+      sheetA.columns = [
+        { header: "Field", key: "field", width: 40 },
+        { header: "Value", key: "value", width: 50 },
+      ];
+      styleHeader(sheetA.getRow(1));
+
+      const sectionARows: [string, unknown][] = [
+        ["Application Status", application.status],
+        ["Contract Title", application.contractTitle || sA?.contractProjectTitle],
+        ["Contract Number", application.contractNumber],
+        ["Contractor Name", application.contractorName],
+        ["Operator / Project Promoter", sA?.operatorOrProjectPromoter],
+        ["Reference Number", sA?.referenceNumber],
+        ["Contract Type", sA?.contractType],
+        ["Currency", sA?.currency],
+        ["Contract Project Number", sA?.contractProjectNumber],
+        ["Commencement Date", sA?.commencementDate],
+        ["Bid Commencement Date", sA?.bidCommencementDate],
+        ["Contract Completion Date", sA?.contractCompletionDate],
+        ["Contract Duration", sA?.contractDuration],
+        ["Main Contractor", sA?.mainContractor],
+        ["Sub Contractors", sA?.subContractors],
+        ["Total Contract Value", sA?.totalContractValue],
+        ["Total NC Value", sA?.totalNCValue],
+        ["1% NCDF", sA?.onePercentNCDF],
+        ["Total NC % Spend", sA?.totalNCPercentSpend],
+        ["Total NC % Manhours", sA?.totalNCPercentManhours],
+        ["NCDMB HCD Training Budget %", sA?.ncdmbHcdTrainingBudgetPercent],
+        ["Date & Ref – INC Plan Approval", sA?.dateAndRefIncPlanApproval],
+        ["Date & Ref – NCDMB Tech Evaluation", sA?.dateAndRefNCDMBTechEvaluation],
+        ["Date & Ref – NCDMB Comm Evaluation", sA?.dateAndRefNCDMBCommEvaluation],
+        ["Single Source Approval Date & Ref", sA?.singleSourceApprovalDateAndRef],
+      ];
+
+      sectionARows.forEach(([field, value]) => {
+        sheetA.addRow({ field, value: value ?? "" });
+      });
+
+      // ── Sheet 2: Section B1 – Personnel ────────────────────────────
+      const sheetB1 = workbook.addWorksheet("B1 – Personnel");
+      const b1Cols = [
+        "Category", "Job Position", "Company Name", "Total Personnel",
+        "Nigerian Nationality", "Foreign Nationality",
+        "In-Country Nigerian", "In-Country Expat",
+        "Out-Country Nigerian", "Out-Country Expat",
+        "NC Manhours", "NC Spend Value", "Foreign Spend Value",
+        "Total Spend Value", "NC Spend %",
+      ];
+      sheetB1.addRow(b1Cols);
+      styleHeader(sheetB1.getRow(1));
+      sheetB1.columns = b1Cols.map((h) => ({ header: h, width: 20 }));
+
+      const b1 = (sB as any)?.b1 as Record<string, Record<string, unknown>> | undefined;
+      const b1Categories: Record<string, string> = {
+        b1_0: "Management",
+        b1_1: "Professional / Technical",
+        b1_2: "Skilled / Semi-skilled",
+      };
+      if (b1) {
+        Object.entries(b1).forEach(([key, rec]) => {
+          sheetB1.addRow([
+            b1Categories[key] ?? key,
+            rec.jobPosition, rec.companyName, rec.totalPersonnel,
+            rec.nigerianNationality, rec.foreignNationality,
+            rec.inCountryNigerian, rec.inCountryExpat,
+            rec.outCountryNigerian, rec.outCountryExpat,
+            rec.ncManhours, rec.ncSpendValue, rec.foreignSpendValue,
+            rec.totalSpendValue, rec.ncSpendPercent,
+          ]);
+        });
+      }
+
+      // Helper: add an array-of-records sheet
+      const addRecordSheet = (
+        name: string,
+        records: Record<string, unknown>[],
+        colMap: { header: string; key: string }[]
+      ) => {
+        const ws = workbook.addWorksheet(name);
+        ws.columns = colMap.map((c) => ({ header: c.header, key: c.key, width: 22 }));
+        styleHeader(ws.getRow(1));
+        records.forEach((r) => {
+          ws.addRow(colMap.reduce((acc, c) => ({ ...acc, [c.key]: r[c.key] ?? "" }), {}));
+        });
+      };
+
+      const b2 = ((sB as any)?.b2 ?? []) as Record<string, unknown>[];
+      addRecordSheet("B2 – Procurement", b2, [
+        { header: "Procurement Item", key: "procurementItem" },
+        { header: "Manufactured In-Country", key: "manufacturedInCountry" },
+        { header: "In-Country Vendor", key: "inCountryVendor" },
+        { header: "Out-Country Vendor", key: "outCountryVendor" },
+        { header: "UOM", key: "uom" },
+        { header: "Procured In-Country", key: "procuredInCountry" },
+        { header: "Procured Out-Country", key: "procuredOutCountry" },
+        { header: "NC %", key: "ncPercent" },
+        { header: "NC Value", key: "ncValue" },
+        { header: "Foreign Value", key: "foreignValue" },
+        { header: "Total Value", key: "totalValue" },
+        { header: "NC Spend %", key: "ncSpendPercent" },
+      ]);
+
+      const b3 = ((sB as any)?.b3 ?? []) as Record<string, unknown>[];
+      addRecordSheet("B3 – Equipment", b3, [
+        { header: "Equipment Name", key: "equipmentName" },
+        { header: "Available In-Country", key: "availableInCountry" },
+        { header: "In-Country Owner", key: "inCountryOwner" },
+        { header: "Out-Country Owner", key: "outCountryOwner" },
+        { header: "Nigerian Ownership", key: "nigerianOwnership" },
+        { header: "Foreign Ownership", key: "foreignOwnership" },
+        { header: "NC %", key: "ncPercent" },
+        { header: "NC Value", key: "ncValue" },
+        { header: "Foreign Value", key: "foreignValue" },
+        { header: "Total Value", key: "totalValue" },
+        { header: "NC Spend %", key: "ncSpendPercent" },
+      ]);
+
+      const b4 = ((sB as any)?.b4 ?? []) as Record<string, unknown>[];
+      addRecordSheet("B4 – Fabrication", b4, [
+        { header: "Item Name", key: "itemName" },
+        { header: "In-Country Fabrication Yard", key: "inCountryFabricationYard" },
+        { header: "Out-Country Fabrication Yard", key: "outCountryFabricationYard" },
+        { header: "UOM", key: "uom" },
+        { header: "Fabricated In-Country", key: "fabricatedInCountry" },
+        { header: "Fabricated Out-Country", key: "fabricatedOutCountry" },
+        { header: "NC % Tonnage", key: "ncPercentTonage" },
+        { header: "NC Value", key: "ncValue" },
+        { header: "Foreign Value", key: "foreignValue" },
+        { header: "Total Value", key: "totalValue" },
+        { header: "NC Spend %", key: "ncSpendPercent" },
+      ]);
+
+      const b5 = ((sB as any)?.b5 ?? []) as Record<string, unknown>[];
+      addRecordSheet("B5 – Services", b5, [
+        { header: "Item Name", key: "itemName" },
+        { header: "In-Country Vendor", key: "inCountryVendor" },
+        { header: "Out-Country Vendor", key: "outCountryVendor" },
+        { header: "UOM", key: "uom" },
+        { header: "Executed In-Country", key: "executedInCountry" },
+        { header: "Executed Out-Country", key: "executedOutCountry" },
+        { header: "NC %", key: "ncPercent" },
+        { header: "NC Value", key: "ncValue" },
+        { header: "Foreign Value", key: "foreignValue" },
+        { header: "Total Value", key: "totalValue" },
+        { header: "NC Spend %", key: "ncSpendPercent" },
+      ]);
+
+      const b6 = ((sB as any)?.b6 ?? []) as Record<string, unknown>[];
+      addRecordSheet("B6 – Professional Services", b6, [
+        { header: "Item Name", key: "itemName" },
+        { header: "In-Country Firm", key: "inCountryFirm" },
+        { header: "Out-Country Firm", key: "outCountryFirm" },
+        { header: "UOM", key: "uom" },
+        { header: "Executed In-Country", key: "executedInCountry" },
+        { header: "Executed Out-Country", key: "executedOutCountry" },
+        { header: "NC %", key: "ncPercent" },
+        { header: "NC Value", key: "ncValue" },
+        { header: "Foreign Value", key: "foreignValue" },
+        { header: "Total Value", key: "totalValue" },
+        { header: "NC Spend %", key: "ncSpendPercent" },
+      ]);
+
+      // ── Sheet 3: Section C ──────────────────────────────────────────
+      const sheetC = workbook.addWorksheet("C – Training & R&D");
+      sheetC.columns = [
+        { header: "Field", key: "field", width: 38 },
+        { header: "Value", key: "value", width: 50 },
+      ];
+      styleHeader(sheetC.getRow(1));
+
+      const c1 = (sC as any)?.c1 as Record<string, unknown> | undefined;
+      const c2 = (sC as any)?.c2 as Record<string, unknown> | undefined;
+      const c3 = (sC as any)?.c3 as Record<string, unknown> | undefined;
+
+      const addSectionCGroup = (label: string, fields: [string, unknown][]) => {
+        const subRow = sheetC.addRow({ field: label, value: "" });
+        styleSubHeader(subRow);
+        sheetC.mergeCells(`A${subRow.number}:B${subRow.number}`);
+        fields.forEach(([f, v]) => sheetC.addRow({ field: f, value: v ?? "" }));
+      };
+
+      addSectionCGroup("C1 – HCD Training", [
+        ["Training Scope", c1?.trainingScope],
+        ["HCD %", c1?.hcdPercentage],
+      ]);
+      addSectionCGroup("C2 – Gap Closure Initiatives", [
+        ["Scope Details", c2?.scopeDetails],
+        ["Project Location", c2?.projectLocation],
+        ["Activity Duration", c2?.activityDuration],
+        ["Number of Personnel", c2?.numberOfPersonnel],
+        ["Primary Activity", c2?.primaryActivity],
+        ["Outcome", c2?.outcome],
+        ["Cost of Activity", c2?.costOfActivity],
+      ]);
+      addSectionCGroup("C3 – Research & Development", [
+        ["Type of Research", c3?.typeOfResearch],
+        ["Project Location", c3?.projectLocation],
+        ["Activity Duration", c3?.activityDuration],
+        ["Number of Researchers", c3?.numberOfResearcher],
+        ["Type of Researcher", c3?.typeOfResearcher],
+        ["Brief Scope of Work", c3?.briefScopeOfWork],
+        ["Cost of Activity", c3?.costOfActivity],
+      ]);
+
+      // ── Sheet 4: Declaration ────────────────────────────────────────
+      const sheetD = workbook.addWorksheet("Declaration");
+      sheetD.columns = [
+        { header: "Field", key: "field", width: 38 },
+        { header: "Value", key: "value", width: 50 },
+      ];
+      styleHeader(sheetD.getRow(1));
+
+      const declRows: [string, unknown][] = [
+        ["Operator Name", (application as any).operatorName],
+        ["Operator Designation", (application as any).operatorDesignation],
+        ["Operator Date", (application as any).operatorDate],
+        ["Service Provider Name", (application as any).serviceProviderName],
+        ["Service Provider Designation", (application as any).serviceProviderDesignation],
+        ["Service Provider Date", (application as any).serviceProviderDate],
+      ];
+      declRows.forEach(([field, value]) => sheetD.addRow({ field, value: value ?? "" }));
+
+      // ── Serialize workbook ──────────────────────────────────────────
+      const filename = `NCCC_Application_${id}.xlsx`;
+
+      if (sendToEmail) {
+        // Send as email attachment to the applicant
+        const user = await User.findById(req.user?.id).select("email firstname username").lean();
+        if (!user) throw new APIError({ message: "User not found", status: 404 });
+
+        const buffer = await workbook.xlsx.writeBuffer() as unknown as Buffer;
+
+        await sendEmail({
+          to: user.email,
+          subject: `NCCC Application Export – ${application.contractTitle || id}`,
+          html: `
+            <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+              <h2 style="color:#1a3c5e">NCCC Portal – Application Export</h2>
+              <p>Hi ${user.firstname ?? user.username},</p>
+              <p>Please find your exported NCCC application attached as an Excel workbook.</p>
+              <p><strong>Contract Title:</strong> ${application.contractTitle || "N/A"}<br/>
+                 <strong>Status:</strong> ${application.status}</p>
+              <p style="color:#666;font-size:12px">This is an automated message from the NCCC Portal.</p>
+            </div>
+          `,
+          attachments: [{ filename, content: buffer, contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }],
+        });
+
+        return res.status(200).json(
+          createResponse({
+            status: 200,
+            success: true,
+            message: `Export sent to ${user.email}`,
+          })
+        );
+      }
+
+      // Stream file directly to browser
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      await workbook.xlsx.write(res);
+      res.end();
     } catch (error) {
       next(error);
     }

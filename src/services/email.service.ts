@@ -19,6 +19,11 @@ export const sendEmail = async (MailOptions: MailOptions) => {
     to: MailOptions.to,
     subject: MailOptions.subject,
     html: MailOptions.html,
+    attachments: MailOptions.attachments?.map((a) => ({
+      filename: a.filename,
+      content: a.content,
+      contentType: a.contentType,
+    })),
   };
   try {
     await transporter.sendMail(mail);

@@ -36,6 +36,7 @@
     "cloudinary": "^2.8.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
+    "exceljs": "^4.4.0",
     "express": "^5.2.1",
     "googleapis": "^169.0.0",
     "http-status": "^2.1.0",

@@ -19,6 +19,7 @@ router.put('/:id/review', requireAdmin, ApplicationController.reviewApplication)
 router.put('/:id', ApplicationController.updateApplication);
 router.delete('/:id', ApplicationController.deleteApplication);
 router.get('/:id', ApplicationController.getApplicationById);
+router.post('/:id/export', ApplicationController.exportToExcel);
 
 // Search history
 router.get('/search/history', ApplicationController.getSearchHistory);
