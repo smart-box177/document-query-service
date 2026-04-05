@@ -3,7 +3,9 @@ import { createResponse } from "../helpers/response";
 import { User } from "../models/user.model";
 import APIError from "../helpers/api.error";
 import { removeBackgroundFromImageUrl } from "remove.bg";
-import { REMOVE_BG_API_KEY } from "../constant";
+import { REMOVE_BG_API_KEY, JWT_ACCESS_SECRET, JWT_ACCESS_EXPIRY } from "../constant";
+import { sign } from "jsonwebtoken";
+import type { SignatureTokenPayload } from "../interfaces/params";
 
 export class UserController {
   /**
@@ -245,6 +247,63 @@ export class UserController {
     } catch (error) {
       console.error("Remove BG error:", error);
       next(new APIError({ message: "Failed to remove background from image", status: 500 }));
+    }
+  }
+
+  /**
+   * Sign a declaration with the authenticated user's credentials.
+   * Returns a short-lived JWT that proves the logged-in user attached
+   * this signature URL at this point in time.
+   */
+  static async signDeclaration(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.user) {
+        throw new APIError({ message: "Not authenticated", status: 401 });
+      }
+
+      const { signatureUrl, role } = req.body as { signatureUrl?: string; role?: string };
+
+      if (!signatureUrl) {
+        throw new APIError({ message: "signatureUrl is required", status: 400 });
+      }
+
+      if (!role || !["operator", "serviceProvider"].includes(role)) {
+        throw new APIError({
+          message: "role must be 'operator' or 'serviceProvider'",
+          status: 400,
+        });
+      }
+
+      const user = await User.findById(req.user.id)
+        .select("username email role")
+        .orFail(() => new APIError({ message: "User not found", status: 404 }));
+
+      if (!JWT_ACCESS_SECRET) {
+        throw new APIError({ message: "Server misconfiguration", status: 500 });
+      }
+
+      const payload: SignatureTokenPayload = {
+        user_id: String(user._id),
+        email: user.email ?? "",
+        username: user.username,
+        signatureUrl,
+        signedAt: new Date().toISOString(),
+        role,
+      };
+
+      // Expire in 1 year — the token is an audit record, not a session token
+      const token = sign(payload, JWT_ACCESS_SECRET, { expiresIn: "365d" });
+
+      res.status(200).json(
+        createResponse({
+          status: 200,
+          success: true,
+          message: "Declaration signed successfully",
+          data: { token },
+        })
+      );
+    } catch (error) {
+      next(error);
     }
   }
 }

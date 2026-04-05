@@ -14,4 +14,6 @@ router.route("/signature/remove-bg").post(UserController.removeSignatureBackgrou
 
 router.route("/signature").post(uploadMiddleware.single("file"), MediaController.uploadSignature);
 
+router.route("/sign-declaration").post(UserController.signDeclaration);
+
 export { router as UserRouter };

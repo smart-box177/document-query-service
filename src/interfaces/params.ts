@@ -17,6 +17,15 @@ export interface AccessTokenPayload {
   role?: string;
 }
 
+export interface SignatureTokenPayload {
+  user_id: string;
+  email: string;
+  username: string;
+  signatureUrl: string;
+  signedAt: string; // ISO timestamp
+  role: string; // "operator" | "serviceProvider"
+}
+
 export interface MailOptions {
   to: string;
   subject: string;
