@@ -23,6 +23,7 @@ export const JWT_RESET_EXPIRY = process.env.JWT_RESET_EXPIRY || "1h";
 export const JWT_VERIFICATION_EXPIRY = process.env.JWT_VERIFICATION_EXPIRY || "24h";
 
 export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
+export const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
 export const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
 export const REDIRECT_URI = process.env.REDIRECT_URI || "";
 

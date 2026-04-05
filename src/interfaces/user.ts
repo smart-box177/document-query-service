@@ -7,6 +7,7 @@ export enum AuthProvider {
 
 export enum UserRole {
   ADMIN = "admin",
+  PCAD = "PCAD",
   USER = "user",
 }
 

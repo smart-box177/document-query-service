@@ -61,12 +61,12 @@ export class UserController {
       const { id } = req.params;
       const { role } = req.body;
 
-      if (!["user", "admin"].includes(role)) {
-        throw new APIError({ message: "Invalid role", status: 400 });
+      if (!["user", "admin", "PCAD"].includes(role)) {
+        throw new APIError({ message: "Invalid role. Allowed roles: user, admin, PCAD", status: 400 });
       }
 
       // Prevent admin from removing their own admin role
-      if (req.user?.id === id && role !== "admin") {
+      if (req.user?.id === id && req.user?.role === "admin" && role !== "admin") {
         throw new APIError({
           message: "You cannot remove your own admin privileges",
           status: 400,
@@ -135,6 +135,7 @@ export class UserController {
     try {
       const totalUsers = await User.countDocuments();
       const adminCount = await User.countDocuments({ role: "admin" });
+      const pcadCount = await User.countDocuments({ role: "PCAD" });
       const userCount = await User.countDocuments({ role: "user" });
 
       const recentUsers = await User.find()
@@ -150,6 +151,7 @@ export class UserController {
           data: {
             totalUsers,
             adminCount,
+            pcadCount,
             userCount,
             recentUsers,
           },

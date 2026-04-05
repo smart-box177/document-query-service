@@ -6,6 +6,9 @@ import { Media } from "../models/media.model";
 import { SearchHistory } from "../models/history.model";
 import { User } from "../models/user.model";
 import APIError from "../helpers/api.error";
+import { sendEmail } from "../services/email.service";
+import { applicationSubmittedAdminTemplate } from "../helpers/emails/application-submitted";
+import { CLIENT_URL } from "../constant";
 
 export class ApplicationController {
   /**
@@ -175,6 +178,48 @@ export class ApplicationController {
           data: application,
         })
       );
+
+      // Fire-and-forget: notify all admins by email (does not block the response)
+      void (async () => {
+        try {
+          const admins = await User.find({ role: "PCAD" }).select("email firstname lastname username").lean();
+          if (!admins.length) return;
+
+          const appId = String(application._id);
+          const contractTitle =
+            (application as any).sectionA?.contractProjectTitle ??
+            (application as any).contractTitle ??
+            "";
+          const operator =
+            (application as any).sectionA?.operatorOrProjectPromoter ??
+            (application as any).operator ??
+            "";
+          const referenceNumber =
+            (application as any).sectionA?.referenceNumber ?? "";
+          const applicantName = req.user?.username ?? req.user?.email ?? "An operator";
+          const reviewLink = `${CLIENT_URL}/admin/applications`;
+
+          await Promise.allSettled(
+            admins.map((admin) =>
+              sendEmail({
+                to: admin.email as string,
+                subject: `[Action Required] New NCCC Application Submitted — ${referenceNumber || appId.slice(-8).toUpperCase()}`,
+                html: applicationSubmittedAdminTemplate(
+                  admin.firstname ?? admin.username,
+                  applicantName,
+                  appId,
+                  contractTitle,
+                  operator,
+                  referenceNumber,
+                  reviewLink
+                ),
+              })
+            )
+          );
+        } catch {
+          // Swallow — email failure must never break the submission response
+        }
+      })();
     } catch (error) {
       next(error);
     }
@@ -371,7 +416,7 @@ export class ApplicationController {
       if (operator)
         query.operator = { $regex: operator, $options: "i" };
 
-      if (req.user?.role !== "admin") {
+      if (req.user?.role !== "admin" && req.user?.role !== "PCAD") {
         query.userId = new Types.ObjectId(req.user?.id);
       }
 

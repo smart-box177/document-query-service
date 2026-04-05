@@ -30,3 +30,35 @@ export const requireAdmin = (
 
   next();
 };
+
+/**
+ * Middleware to check if user has the PCAD role.
+ * PCAD (Principal Compliance Approval Desk) users are the only ones
+ * authorised to approve, reject, or request revisions on applications.
+ * Must be used after authenticateUser middleware.
+ */
+export const requirePCAD = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  if (!req.user) {
+    return next(
+      new APIError({
+        message: "Authentication required",
+        status: 401,
+      })
+    );
+  }
+
+  if (req.user.role !== "PCAD") {
+    return next(
+      new APIError({
+        message: "PCAD access required. Only authorised compliance officers can review applications.",
+        status: 403,
+      })
+    );
+  }
+
+  next();
+};
