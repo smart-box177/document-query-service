@@ -208,14 +208,6 @@ const sectionASchema = new Schema(
     subContractors: { type: String },
     totalNCPercentSpend: { type: String },
     totalNCPercentManhours: { type: String },
-    operatorSignature: { type: String },
-    operatorName: { type: String },
-    operatorDesignation: { type: String },
-    operatorDate: { type: String },
-    serviceProviderSignature: { type: String },
-    serviceProviderName: { type: String },
-    serviceProviderDesignation: { type: String },
-    serviceProviderDate: { type: String },
   },
   { _id: false }
 );
@@ -253,6 +245,18 @@ const applicationSchema = new Schema<IApplication>(
     isArchived: { type: Boolean, default: false, index: true },
     archivedAt: { type: Date },
     archivedBy: { type: Schema.Types.ObjectId, ref: "user" },
+
+    // Declaration & Signatures (top-level — submitted by operator in step 4)
+    operatorSignature: { type: String, default: null },
+    operatorSignatureToken: { type: String, default: null },
+    operatorName: { type: String },
+    operatorDesignation: { type: String },
+    operatorDate: { type: String },
+    serviceProviderSignature: { type: String, default: null },
+    serviceProviderSignatureToken: { type: String, default: null },
+    serviceProviderName: { type: String },
+    serviceProviderDesignation: { type: String },
+    serviceProviderDate: { type: String },
   },
   { timestamps: true }
 );
@@ -260,9 +264,9 @@ const applicationSchema = new Schema<IApplication>(
 // Pre-save hook to generate reference number
 applicationSchema.pre('save', async function() {
   // Generate reference number if not already set and operator name is provided
-  if (this.sectionA && !this.sectionA.referenceNumber && this.sectionA.operatorName) {
+  if (this.sectionA && !this.sectionA.referenceNumber && this.sectionA.operatorOrProjectPromoter) {
     // Clean operator name: remove special characters, replace spaces with hyphens, convert to uppercase
-    const cleanOperatorName = this.sectionA.operatorName
+    const cleanOperatorName = this.sectionA.operatorOrProjectPromoter
       .trim()
       .replace(/[^a-zA-Z0-9\s]/g, '')
       .replace(/\s+/g, '-')

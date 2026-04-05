@@ -31,6 +31,18 @@ export interface IApplication {
     isArchived?: boolean;
     archivedAt?: Date;
     archivedBy?: Types.ObjectId;
+
+    // Declaration & Signatures (top-level)
+    operatorSignature?: string | null;
+    operatorSignatureToken?: string | null;
+    operatorName?: string;
+    operatorDesignation?: string;
+    operatorDate?: string;
+    serviceProviderSignature?: string | null;
+    serviceProviderSignatureToken?: string | null;
+    serviceProviderName?: string;
+    serviceProviderDesignation?: string;
+    serviceProviderDate?: string;
   }
   
   // enums/currency.ts
@@ -72,14 +84,6 @@ export interface IApplication {
     subContractors: string; // usually comma-separated or multiline
     totalNCPercentSpend: string;
     totalNCPercentManhours: string;
-    operatorSignature?: File | string | null; // or string (base64 / url) depending on your signature handling
-    operatorName: string;
-    operatorDesignation: string;
-    operatorDate: string; // ISO date string or empty
-    serviceProviderSignature?: File | null;
-    serviceProviderName?: string;
-    serviceProviderDesignation?: string;
-    serviceProviderDate?: string;
   }
   
   // Section B: Local Content Components
