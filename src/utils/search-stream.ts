@@ -170,9 +170,12 @@ export async function searchContractsWithSummary(
             { contractorName: { $regex: cleanQuery, $options: "i" } },
             { operator: { $regex: cleanQuery, $options: "i" } },
             { contractNumber: { $regex: cleanQuery, $options: "i" } },
+            { contractId: { $regex: cleanQuery, $options: "i" } },
             { "sectionA.contractProjectTitle": { $regex: cleanQuery, $options: "i" } },
             { "sectionA.mainContractor": { $regex: cleanQuery, $options: "i" } },
             { "sectionA.operatorOrProjectPromoter": { $regex: cleanQuery, $options: "i" } },
+            { "sectionA.contractProjectNumber": { $regex: cleanQuery, $options: "i" } },
+            { "sectionA.referenceNumber": { $regex: cleanQuery, $options: "i" } },
           ],
         }
       : {};

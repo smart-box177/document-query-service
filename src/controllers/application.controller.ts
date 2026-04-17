@@ -475,7 +475,7 @@ export class ApplicationController {
       const recentApplications = await Application.find(filter)
         .sort({ createdAt: -1 })
         .limit(5)
-        .populate("contractId");
+        .populate("userId", "username email"); 
 
       res.status(200).json(
         createResponse({
@@ -587,9 +587,12 @@ export class ApplicationController {
               { contractorName: { $regex: cleanQuery, $options: "i" } },
               { operator: { $regex: cleanQuery, $options: "i" } },
               { contractNumber: { $regex: cleanQuery, $options: "i" } },
+              { contractId: { $regex: cleanQuery, $options: "i" } },
               { "sectionA.contractProjectTitle": { $regex: cleanQuery, $options: "i" } },
               { "sectionA.mainContractor": { $regex: cleanQuery, $options: "i" } },
               { "sectionA.operatorOrProjectPromoter": { $regex: cleanQuery, $options: "i" } },
+              { "sectionA.contractProjectNumber": { $regex: cleanQuery, $options: "i" } },
+              { "sectionA.referenceNumber": { $regex: cleanQuery, $options: "i" } },
             ],
           }
         : {};
@@ -818,7 +821,7 @@ export class ApplicationController {
       }
 
       const existingBookmark = user.bookmarks?.find(
-        (b) => b.applicationId.toString() === applicationId
+        (b) => b.applicationId?.toString() === applicationId
       );
 
       if (existingBookmark) {
