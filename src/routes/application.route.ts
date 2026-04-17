@@ -14,6 +14,7 @@ router.put('/:id/draft', ApplicationController.saveAsDraft);
 router.post('/submit', ApplicationController.saveAndSubmit);
 router.put('/:id/submit', ApplicationController.saveAndSubmit);
 router.get('/', ApplicationController.getApplications);
+router.get('/analytics', ApplicationController.getAnalytics);
 router.get('/search', ApplicationController.search);
 router.put('/:id/review', requireAdmin, ApplicationController.reviewApplication);
 router.put('/:id', ApplicationController.updateApplication);
