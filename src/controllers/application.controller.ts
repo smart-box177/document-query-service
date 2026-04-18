@@ -447,6 +447,57 @@ export class ApplicationController {
     }
   }
 
+  /**
+   * Get analytics dashboard stats for the current user
+   */
+  static async getAnalytics(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      if (!req.user) {
+        throw new APIError({ message: "Not authenticated", status: 401 });
+      }
+
+      const filter: any = {};
+      
+      // If user is not admin or PCAD, only show stats for their own applications
+      if (req.user.role !== "admin" && req.user.role !== "PCAD") {
+        filter.userId = new Types.ObjectId(req.user.id);
+      }
+
+      const total = await Application.countDocuments(filter);
+      const pending = await Application.countDocuments({ ...filter, status: { $in: ["SUBMITTED", "REVIEWING", "REVISION_REQUESTED"] } });
+      const approved = await Application.countDocuments({ ...filter, status: "APPROVED" });
+      const rejected = await Application.countDocuments({ ...filter, status: "REJECTED" });
+
+      const recentApplications = await Application.find(filter)
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .populate("userId", "username email"); 
+
+      res.status(200).json(
+        createResponse({
+          status: 200,
+          success: true,
+          message: "Analytics retrieved successfully",
+          data: {
+            stats: {
+              total,
+              pending,
+              approved,
+              rejected,
+            },
+            recentApplications,
+          },
+        })
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async reviewApplication(
     req: Request,
     res: Response,
@@ -536,9 +587,12 @@ export class ApplicationController {
               { contractorName: { $regex: cleanQuery, $options: "i" } },
               { operator: { $regex: cleanQuery, $options: "i" } },
               { contractNumber: { $regex: cleanQuery, $options: "i" } },
+              { contractId: { $regex: cleanQuery, $options: "i" } },
               { "sectionA.contractProjectTitle": { $regex: cleanQuery, $options: "i" } },
               { "sectionA.mainContractor": { $regex: cleanQuery, $options: "i" } },
               { "sectionA.operatorOrProjectPromoter": { $regex: cleanQuery, $options: "i" } },
+              { "sectionA.contractProjectNumber": { $regex: cleanQuery, $options: "i" } },
+              { "sectionA.referenceNumber": { $regex: cleanQuery, $options: "i" } },
             ],
           }
         : {};
@@ -767,7 +821,7 @@ export class ApplicationController {
       }
 
       const existingBookmark = user.bookmarks?.find(
-        (b) => b.applicationId.toString() === applicationId
+        (b) => b.applicationId?.toString() === applicationId
       );
 
       if (existingBookmark) {

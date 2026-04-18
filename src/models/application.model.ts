@@ -241,6 +241,9 @@ const applicationSchema = new Schema<IApplication>(
     hasMedia: { type: Boolean, default: false },
     mediaType: { type: String, enum: ["pdf", "image", "mixed", "other", null], default: null },
 
+    // Contract ID — mirrors sectionA.referenceNumber
+    contractId: { type: String, unique: true, sparse: true, index: true },
+
     // Admin-level archive fields
     isArchived: { type: Boolean, default: false, index: true },
     archivedAt: { type: Date },
@@ -280,6 +283,11 @@ applicationSchema.pre('save', async function() {
     const dateStr = `${year}${month}${day}`;
     
     this.sectionA.referenceNumber = `NCCC/${cleanOperatorName}/${dateStr}`;
+  }
+
+  // Keep contractId in sync with sectionA.referenceNumber
+  if (this.sectionA?.referenceNumber && !this.contractId) {
+    this.contractId = this.sectionA.referenceNumber;
   }
 });
 

@@ -15,6 +15,7 @@ export interface IApplication {
     attachments?: string[];
 
     // Contract/document fields
+    contractId?: string;
     operator?: string;
     contractorName?: string;
     contractTitle?: string;
